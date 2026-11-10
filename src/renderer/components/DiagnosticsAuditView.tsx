@@ -62,10 +62,10 @@ export const DiagnosticsAuditView: React.FC<Props> = ({
   };
 
   return (
-    <div>
+    <div className="max-w-5xl mx-auto space-y-4">
       {/* Диагностический статус Умного шлюза Нейросетей (AI Gateway / proxy-ai) */}
       <div
-        className="card"
+        className="card rounded-xl relative overflow-hidden"
         style={{
           marginBottom: 14,
           border: aiGatewayEnabled
@@ -73,15 +73,8 @@ export const DiagnosticsAuditView: React.FC<Props> = ({
             : '1px solid var(--border-subtle)',
         }}
       >
-        <div
-          style={{
-            display: 'flex',
-            flexWrap: 'wrap',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: 10,
-          }}
-        >
+        <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-[#38BDF8] via-primary-container to-[#38BDF8] opacity-75" />
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <Bot size={18} color="#38BDF8" />
             <div>
@@ -98,11 +91,11 @@ export const DiagnosticsAuditView: React.FC<Props> = ({
             </div>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+          <div className="grid grid-cols-2 sm:flex items-center gap-2 w-full sm:w-auto">
             <span
-              className="badge mono"
+              className="badge mono text-center justify-center"
               style={{
-                padding: '4px 10px',
+                padding: '5px 10px',
                 background: 'rgba(0, 229, 176, 0.14)',
                 color: 'var(--emerald-shield)',
                 border: '1px solid rgba(0, 229, 176, 0.35)',
@@ -112,9 +105,9 @@ export const DiagnosticsAuditView: React.FC<Props> = ({
               AI OK: {aiCompatibleCount}
             </span>
             <span
-              className="badge mono"
+              className="badge mono text-center justify-center"
               style={{
-                padding: '4px 10px',
+                padding: '5px 10px',
                 background: aiGatewayEnabled
                   ? 'rgba(56, 189, 248, 0.16)'
                   : 'var(--bg-elevated)',
@@ -132,16 +125,17 @@ export const DiagnosticsAuditView: React.FC<Props> = ({
       </div>
 
       <div className="grid-2">
-        {/* Блок сканера утечек IP и DNS */}
-        <div className="card">
-          <div className="card-header">
+        {/* Блок сканера утечек IP и DNS (Cyber Score) */}
+        <div className="card rounded-xl relative overflow-hidden">
+          <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-primary-container via-secondary-container to-primary-container opacity-80" />
+          <div className="card-header flex-col sm:flex-row sm:items-center gap-2.5">
             <div className="card-title">
               <Radar size={18} color="var(--emerald-shield)" />
               <span>Интерактивный сканер утечек (IP / DNS / Kill Switch)</span>
             </div>
             <button
               type="button"
-              className="btn btn-primary btn-sm"
+              className="btn btn-primary btn-sm w-full sm:w-auto justify-center"
               disabled={scanning}
               onClick={handleRunScan}
             >
@@ -157,16 +151,18 @@ export const DiagnosticsAuditView: React.FC<Props> = ({
           ) : (
             <div>
               <div
+                className="rounded-xl relative overflow-hidden"
                 style={{
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
                   padding: 12,
-                  borderRadius: 10,
                   background: 'var(--bg-elevated)',
+                  border: '1px solid rgba(0, 245, 155, 0.25)',
                   marginBottom: 12,
                 }}
               >
+                <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-primary-container via-secondary-container to-primary-container opacity-75" />
                 <div>
                   <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
                     Вердикт безопасности:
@@ -190,9 +186,9 @@ export const DiagnosticsAuditView: React.FC<Props> = ({
 
               <div className="grid-2" style={{ marginBottom: 12 }}>
                 <div
+                  className="rounded-xl"
                   style={{
                     padding: 10,
-                    borderRadius: 8,
                     background: '#080d16',
                     border: '1px solid var(--border-subtle)',
                   }}
@@ -209,9 +205,9 @@ export const DiagnosticsAuditView: React.FC<Props> = ({
                 </div>
 
                 <div
+                  className="rounded-xl"
                   style={{
                     padding: 10,
-                    borderRadius: 8,
                     background: 'rgba(0, 245, 155, 0.06)',
                     border: '1px solid var(--border-highlight)',
                   }}
@@ -232,12 +228,12 @@ export const DiagnosticsAuditView: React.FC<Props> = ({
                 {audit.checks.map((chk) => (
                   <div
                     key={chk.id}
+                    className="rounded-xl"
                     style={{
                       display: 'flex',
                       alignItems: 'flex-start',
                       gap: 8,
                       padding: '8px 10px',
-                      borderRadius: 8,
                       background: 'var(--bg-elevated)',
                       fontSize: 12.5,
                     }}
@@ -269,7 +265,8 @@ export const DiagnosticsAuditView: React.FC<Props> = ({
         </div>
 
         {/* Полный журнал событий Auto-Failover */}
-        <div className="card">
+        <div className="card rounded-xl relative overflow-hidden">
+          <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-secondary-container via-primary-container to-secondary-container opacity-75" />
           <div className="card-header">
             <div className="card-title">
               <ShieldCheck size={18} color="var(--cyan-mobile)" />
@@ -299,9 +296,9 @@ export const DiagnosticsAuditView: React.FC<Props> = ({
                 return (
                   <div
                     key={ev.id}
+                    className="rounded-xl"
                     style={{
                       padding: '9px 11px',
-                      borderRadius: 8,
                       background: isSwitch
                         ? 'rgba(255, 176, 32, 0.09)'
                         : isKill

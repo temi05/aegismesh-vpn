@@ -123,12 +123,50 @@ export const NodesVaultView: React.FC<Props> = ({ snapshot, onUpdate, onNotify }
     }
   };
 
+  const handleRefreshAllSubscriptions = async () => {
+    if (snapshot.subscriptions.length === 0) {
+      onNotify('Нет подключённых подписок для обновления', true);
+      return;
+    }
+    setBusy(true);
+    try {
+      let latestSnap = snapshot;
+      for (const sub of snapshot.subscriptions) {
+        latestSnap = await aegisApi.refreshSubscription(sub.id);
+      }
+      onUpdate(latestSnap);
+      onNotify(`Обновлено подписок: ${snapshot.subscriptions.length}`);
+    } catch (err) {
+      onNotify(err instanceof Error ? err.message : 'Ошибка обновления подписок', true);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handlePingAllNodes = async () => {
+    if (snapshot.nodes.length === 0) {
+      onNotify('Серверы пока не добавлены', true);
+      return;
+    }
+    setBusy(true);
+    try {
+      const next = await aegisApi.pingAll();
+      onUpdate(next);
+      onNotify('Пинг всех серверов проверен');
+    } catch (err) {
+      onNotify(err instanceof Error ? err.message : 'Ошибка проверки пинга', true);
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const externalClients = snapshot.externalClients || [];
 
   return (
     <div className="max-w-5xl mx-auto space-y-4">
       {/* 1. ЕДИНЫЙ БЛОК ДОБАВЛЕНИЯ КЛЮЧА ИЛИ ПОДПИСКИ В 1 ТАП */}
-      <div className="rounded-xl bg-surface border border-outline-variant p-4 md:p-5 space-y-3">
+      <div className="rounded-xl relative overflow-hidden bg-surface border border-outline-variant p-4 md:p-5 space-y-3.5">
+        <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-secondary-container via-primary-container to-secondary-container opacity-80" />
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
             <h2 className="font-headline-md text-base md:text-lg text-on-surface font-bold">
@@ -141,15 +179,15 @@ export const NodesVaultView: React.FC<Props> = ({ snapshot, onUpdate, onNotify }
           </div>
         </div>
 
-        <div className="flex flex-wrap gap-2">
+        <div className="space-y-2">
           <button
             type="button"
             disabled={busy}
             onClick={() => void handlePasteOneTap()}
-            className="flex-1 min-w-[230px] py-3 px-4 min-h-[48px] rounded-lg bg-primary-container text-on-primary font-badge-code text-xs font-bold flex items-center justify-center gap-2 shield-glow cursor-pointer"
+            className="w-full py-3 px-4 min-h-[48px] rounded-xl bg-primary-container text-on-primary font-badge-code text-xs font-bold flex items-center justify-center gap-2 shield-glow cursor-pointer"
           >
             <ClipboardPaste size={17} />
-            <span>{busy ? 'ЗАГРУЗКА...' : '+ ВСТАВИТЬ КЛЮЧ ИЛИ ПОДПИСКУ ИЗ БУФЕРА'}</span>
+            <span>{busy ? 'ЗАГРУЗКА...' : '+ Вставить из буфера (ключ или подписку)'}</span>
           </button>
 
           <input
@@ -159,24 +197,47 @@ export const NodesVaultView: React.FC<Props> = ({ snapshot, onUpdate, onNotify }
             className="hidden"
             onChange={handleFileUpload}
           />
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => fileInputRef.current?.click()}
-            className="px-3.5 py-3 min-h-[48px] rounded-lg bg-surface-container-high hover:bg-surface-variant border border-outline-variant text-on-surface font-telemetry-md text-xs flex items-center gap-1.5 cursor-pointer"
-          >
-            <FileUp size={15} />
-            <span>Файл .conf / .txt</span>
-          </button>
 
-          <button
-            type="button"
-            onClick={() => setShowManualForm((v) => !v)}
-            className="px-3.5 py-3 min-h-[48px] rounded-lg bg-surface-container hover:bg-surface-container-high border border-outline-variant text-on-surface-variant text-xs flex items-center gap-1 cursor-pointer"
-          >
-            <span>Ввести вручную</span>
-            {showManualForm ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
-          </button>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 w-full">
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => fileInputRef.current?.click()}
+              className="w-full px-3 py-2.5 min-h-[42px] rounded-lg bg-surface-container-high hover:bg-surface-variant border border-outline-variant text-on-surface font-telemetry-md text-xs flex items-center justify-center gap-1.5 cursor-pointer"
+            >
+              <FileUp size={15} className="text-secondary" />
+              <span>Загрузить .conf</span>
+            </button>
+
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => void handlePingAllNodes()}
+              className="w-full px-3 py-2.5 min-h-[42px] rounded-lg bg-surface-container-high hover:bg-surface-variant border border-secondary-container/40 text-secondary font-badge-code text-xs flex items-center justify-center gap-1.5 cursor-pointer"
+            >
+              <RefreshCw size={14} className={busy ? 'animate-spin' : ''} />
+              <span>Пинг всех</span>
+            </button>
+
+            <button
+              type="button"
+              disabled={busy || snapshot.subscriptions.length === 0}
+              onClick={() => void handleRefreshAllSubscriptions()}
+              className="w-full px-3 py-2.5 min-h-[42px] rounded-lg bg-surface-container-high hover:bg-surface-variant border border-primary-container/40 text-primary font-badge-code text-xs flex items-center justify-center gap-1.5 disabled:opacity-50 cursor-pointer"
+            >
+              <RefreshCw size={14} className={busy ? 'animate-spin' : ''} />
+              <span>Обновить подписки</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setShowManualForm((v) => !v)}
+              className="w-full px-3 py-2.5 min-h-[42px] rounded-lg bg-surface-container hover:bg-surface-container-high border border-outline-variant text-on-surface-variant text-xs flex items-center justify-center gap-1 cursor-pointer"
+            >
+              <span>Ввести вручную</span>
+              {showManualForm ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
+            </button>
+          </div>
         </div>
 
         {showManualForm && (
@@ -199,7 +260,7 @@ export const NodesVaultView: React.FC<Props> = ({ snapshot, onUpdate, onNotify }
               type="button"
               disabled={busy}
               onClick={() => void importUniversalPayload(rawInput, subName)}
-              className="px-4 py-2.5 min-h-[44px] rounded-lg bg-primary-container text-on-primary font-badge-code text-xs font-bold flex items-center gap-1.5 cursor-pointer"
+              className="w-full sm:w-auto px-4 py-2.5 min-h-[44px] rounded-lg bg-primary-container text-on-primary font-badge-code text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer"
             >
               <Plus size={15} />
               <span>Добавить в мои VPN</span>
@@ -210,12 +271,24 @@ export const NodesVaultView: React.FC<Props> = ({ snapshot, onUpdate, onNotify }
 
       {/* 2. МОИ ПОДПИСКИ И VPN-СЕРВИСЫ (С МЕТАДАННЫМИ ТРАФИКА И ГАЛОЧКАМИ АВТОЗАМЕНЫ) */}
       {snapshot.subscriptions.length > 0 && (
-        <div className="rounded-xl bg-surface border border-outline-variant p-4 md:p-5 space-y-3">
-          <div className="flex items-center gap-2 pb-2 border-b border-outline-variant">
-            <Link2 size={17} className="text-secondary" />
-            <h3 className="font-headline-md text-sm md:text-base text-on-surface font-bold">
-              Подключённые VPN-подписки ({snapshot.subscriptions.length})
-            </h3>
+        <div className="rounded-xl relative overflow-hidden bg-surface border border-outline-variant p-4 md:p-5 space-y-3">
+          <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-secondary-container via-primary-container to-secondary-container opacity-75" />
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-outline-variant">
+            <div className="flex items-center gap-2">
+              <Link2 size={17} className="text-secondary" />
+              <h3 className="font-headline-md text-sm md:text-base text-on-surface font-bold">
+                Подключённые VPN-подписки ({snapshot.subscriptions.length})
+              </h3>
+            </div>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => void handleRefreshAllSubscriptions()}
+              className="w-full sm:w-auto px-3 py-1.5 min-h-[36px] rounded-lg bg-surface-container-high hover:bg-surface-variant border border-secondary-container/40 text-secondary font-badge-code text-xs flex items-center justify-center gap-1.5 cursor-pointer"
+            >
+              <RefreshCw size={13} className={busy ? 'animate-spin' : ''} />
+              <span>Обновить подписки</span>
+            </button>
           </div>
 
           <div className="space-y-3">
@@ -229,9 +302,10 @@ export const NodesVaultView: React.FC<Props> = ({ snapshot, onUpdate, onNotify }
               return (
                 <div
                   key={sub.id}
-                  className="p-3.5 rounded-lg bg-surface-container-lowest border border-outline-variant space-y-2.5"
+                  className="p-3.5 rounded-xl relative overflow-hidden bg-surface-container-lowest border border-outline-variant space-y-2.5"
                 >
-                  <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-secondary-container via-primary-container to-secondary-container" />
+                  <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2.5">
                     <div className="flex items-center gap-2.5 min-w-0">
                       <button
                         type="button"
@@ -239,7 +313,7 @@ export const NodesVaultView: React.FC<Props> = ({ snapshot, onUpdate, onNotify }
                           const next = await aegisApi.toggleSubscriptionFailover(sub.id, !checked);
                           onUpdate(next);
                         }}
-                        className={`w-6 h-6 rounded flex items-center justify-center border cursor-pointer ${
+                        className={`w-6 h-6 rounded-md flex items-center justify-center border flex-shrink-0 cursor-pointer ${
                           checked
                             ? 'bg-primary-container text-on-primary border-primary-container'
                             : 'bg-surface-container border-outline'
@@ -270,7 +344,7 @@ export const NodesVaultView: React.FC<Props> = ({ snapshot, onUpdate, onNotify }
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-1.5">
+                    <div className="grid grid-cols-2 sm:flex items-center gap-1.5 w-full sm:w-auto">
                       <button
                         type="button"
                         disabled={busy}
@@ -286,7 +360,7 @@ export const NodesVaultView: React.FC<Props> = ({ snapshot, onUpdate, onNotify }
                             setBusy(false);
                           }
                         }}
-                        className="px-2.5 py-1.5 min-h-[36px] rounded bg-surface-container-high hover:bg-surface-variant border border-outline-variant text-xs text-on-surface flex items-center gap-1 cursor-pointer"
+                        className="w-full sm:w-auto px-2.5 py-1.5 min-h-[36px] rounded-lg bg-surface-container-high hover:bg-surface-variant border border-outline-variant text-xs text-on-surface flex items-center justify-center gap-1 cursor-pointer"
                       >
                         <RefreshCw size={13} className={busy ? 'animate-spin' : ''} />
                         <span>Обновить</span>
@@ -298,10 +372,11 @@ export const NodesVaultView: React.FC<Props> = ({ snapshot, onUpdate, onNotify }
                           onUpdate(next);
                           onNotify(`Подписка «${sub.name}» удалена`);
                         }}
-                        className="p-2 min-h-[36px] rounded bg-error-container/30 hover:bg-error-container/60 border border-error/40 text-error cursor-pointer"
+                        className="w-full sm:w-auto p-2 min-h-[36px] rounded-lg bg-error-container/30 hover:bg-error-container/60 border border-error/40 text-error flex items-center justify-center gap-1 cursor-pointer"
                         title="Удалить подписку"
                       >
                         <Trash2 size={14} />
+                        <span className="sm:hidden text-xs">Удалить</span>
                       </button>
                     </div>
                   </div>
@@ -318,7 +393,7 @@ export const NodesVaultView: React.FC<Props> = ({ snapshot, onUpdate, onNotify }
                       {pct !== null && (
                         <div className="h-1.5 rounded-full bg-surface-container-high overflow-hidden">
                           <div
-                            className="h-full bg-primary-container"
+                            className="h-full bg-gradient-to-r from-secondary-container to-primary-container"
                             style={{ width: `${pct}%` }}
                           />
                         </div>
@@ -339,8 +414,9 @@ export const NodesVaultView: React.FC<Props> = ({ snapshot, onUpdate, onNotify }
       )}
 
       {/* 3. ВНЕШНИЕ VPN-КЛИЕНТЫ НА УСТРОЙСТВЕ (ЛОКАЛЬНЫЙ МОСТ 127.0.0.1) */}
-      <div className="rounded-xl bg-surface border border-outline-variant p-4 md:p-5 space-y-3">
-        <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-outline-variant">
+      <div className="rounded-xl relative overflow-hidden bg-surface border border-outline-variant p-4 md:p-5 space-y-3">
+        <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-secondary-container via-primary-container to-secondary-container opacity-75" />
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-outline-variant">
           <div>
             <h3 className="font-headline-md text-sm md:text-base text-on-surface font-bold">
               Внешние VPN-клиенты (Мост 127.0.0.1)
@@ -362,7 +438,7 @@ export const NodesVaultView: React.FC<Props> = ({ snapshot, onUpdate, onNotify }
                 setBusy(false);
               }
             }}
-            className="px-3 py-2 min-h-[38px] rounded bg-surface-container-high hover:bg-surface-variant border border-secondary-container/50 text-secondary font-badge-code text-xs flex items-center gap-1.5 cursor-pointer"
+            className="w-full sm:w-auto px-3 py-2 min-h-[38px] rounded-lg bg-surface-container-high hover:bg-surface-variant border border-secondary-container/50 text-secondary font-badge-code text-xs flex items-center justify-center gap-1.5 cursor-pointer"
           >
             <Radar size={14} />
             <span>Сканировать порты</span>
@@ -380,7 +456,7 @@ export const NodesVaultView: React.FC<Props> = ({ snapshot, onUpdate, onNotify }
                 );
                 onUpdate(next);
               }}
-              className={`p-3 rounded-lg border flex items-center justify-between gap-2.5 cursor-pointer ${
+              className={`p-3 rounded-xl border flex items-center justify-between gap-2.5 cursor-pointer ${
                 bridge.enabledInFailover
                   ? 'bg-surface-container-lowest border-secondary-container/70'
                   : 'bg-surface-container-lowest/50 border-outline-variant'
@@ -417,18 +493,18 @@ export const NodesVaultView: React.FC<Props> = ({ snapshot, onUpdate, onNotify }
         </div>
 
         {/* Добавление своего кастомного порта внешнего клиента */}
-        <div className="pt-2 border-t border-outline-variant flex flex-wrap gap-2">
+        <div className="pt-2 border-t border-outline-variant grid grid-cols-2 sm:flex sm:flex-wrap gap-2">
           <input
             type="text"
             value={customClientName}
             onChange={(e) => setCustomClientName(e.target.value)}
             placeholder="Имя клиента (напр. Мой Прокси)"
-            className="flex-1 min-w-[140px] bg-[#070A0F] border border-outline-variant rounded px-2.5 py-2 text-xs text-on-surface"
+            className="col-span-2 sm:flex-1 min-w-[140px] bg-[#070A0F] border border-outline-variant rounded-lg px-2.5 py-2 text-xs text-on-surface"
           />
           <select
             value={customClientProto}
             onChange={(e) => setCustomClientProto(e.target.value as 'socks' | 'http')}
-            className="bg-[#070A0F] border border-outline-variant rounded px-2.5 py-2 text-xs text-on-surface"
+            className="bg-[#070A0F] border border-outline-variant rounded-lg px-2.5 py-2 text-xs text-on-surface"
           >
             <option value="socks">SOCKS5</option>
             <option value="http">HTTP</option>
@@ -438,7 +514,7 @@ export const NodesVaultView: React.FC<Props> = ({ snapshot, onUpdate, onNotify }
             value={customClientPort}
             onChange={(e) => setCustomClientPort(e.target.value)}
             placeholder="Порт (напр. 10809)"
-            className="w-36 bg-[#070A0F] border border-outline-variant rounded px-2.5 py-2 text-xs text-on-surface font-mono"
+            className="w-full sm:w-36 bg-[#070A0F] border border-outline-variant rounded-lg px-2.5 py-2 text-xs text-on-surface font-mono"
           />
           <button
             type="button"
@@ -457,7 +533,7 @@ export const NodesVaultView: React.FC<Props> = ({ snapshot, onUpdate, onNotify }
                 onNotify(err instanceof Error ? err.message : 'Ошибка добавления порта', true);
               }
             }}
-            className="px-3 py-2 min-h-[38px] rounded bg-surface-container-high hover:bg-surface-variant border border-outline-variant text-xs text-primary font-badge-code cursor-pointer"
+            className="col-span-2 sm:col-span-1 px-3 py-2 min-h-[38px] rounded-lg bg-surface-container-high hover:bg-surface-variant border border-outline-variant text-xs text-primary font-badge-code flex items-center justify-center cursor-pointer"
           >
             + Порт
           </button>
@@ -465,8 +541,9 @@ export const NodesVaultView: React.FC<Props> = ({ snapshot, onUpdate, onNotify }
       </div>
 
       {/* 4. ВСЕ СЕРВЕРЫ И УПРАВЛЕНИЕ ПОРЯДКОМ ОЧЕРЕДИ */}
-      <div className="rounded-xl bg-surface border border-outline-variant p-4 md:p-5 space-y-3">
-        <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-outline-variant">
+      <div className="rounded-xl relative overflow-hidden bg-surface border border-outline-variant p-4 md:p-5 space-y-3">
+        <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-primary-container via-secondary-container to-primary-container opacity-75" />
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-outline-variant">
           <div className="flex items-center gap-2">
             <Server size={17} className="text-primary-container" />
             <h3 className="font-headline-md text-sm md:text-base text-on-surface font-bold">
@@ -476,22 +553,18 @@ export const NodesVaultView: React.FC<Props> = ({ snapshot, onUpdate, onNotify }
           {snapshot.nodes.length > 0 && (
             <button
               type="button"
-              onClick={async () => {
-                const next = await aegisApi.pingAll();
-                onUpdate(next);
-                onNotify('Пинг всех серверов проверен');
-              }}
-              className="px-2.5 py-1.5 min-h-[36px] rounded bg-surface-container-high border border-outline-variant text-xs text-on-surface flex items-center gap-1.5 cursor-pointer"
+              onClick={() => void handlePingAllNodes()}
+              className="w-full sm:w-auto px-3 py-1.5 min-h-[36px] rounded-lg bg-surface-container-high border border-outline-variant text-xs text-on-surface flex items-center justify-center gap-1.5 cursor-pointer"
             >
-              <RefreshCw size={13} />
-              <span>Проверить все</span>
+              <RefreshCw size={13} className={busy ? 'animate-spin' : ''} />
+              <span>Пинг всех</span>
             </button>
           )}
         </div>
 
         {snapshot.nodes.length === 0 ? (
-          <div className="text-xs text-on-surface-variant py-3">
-            Серверы пока не добавлены. Нажмите «+ Вставить ключ или подписку из буфера» вверху страницы.
+          <div className="text-xs text-on-surface-variant py-3 text-center">
+            Серверы пока не добавлены. Нажмите «+ Вставить из буфера» вверху страницы.
           </div>
         ) : (
           <div className="space-y-2">
@@ -501,7 +574,7 @@ export const NodesVaultView: React.FC<Props> = ({ snapshot, onUpdate, onNotify }
               return (
                 <div
                   key={node.id}
-                  className={`p-3 rounded-lg border flex flex-wrap items-center justify-between gap-2.5 ${
+                  className={`p-3 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 ${
                     isCurrent
                       ? 'bg-primary-container/10 border-primary-container'
                       : 'bg-surface-container-lowest border-outline-variant'
@@ -525,71 +598,75 @@ export const NodesVaultView: React.FC<Props> = ({ snapshot, onUpdate, onNotify }
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    <button
-                      type="button"
-                      disabled={index === 0}
-                      onClick={async () => {
-                        const next = await aegisApi.moveNodePriority(node.id, 'up');
-                        onUpdate(next);
-                      }}
-                      className="p-2 rounded bg-surface-container border border-outline-variant text-on-surface disabled:opacity-40 cursor-pointer"
-                      title="Выше"
-                    >
-                      <ArrowUp size={13} />
-                    </button>
-                    <button
-                      type="button"
-                      disabled={index === snapshot.nodes.length - 1}
-                      onClick={async () => {
-                        const next = await aegisApi.moveNodePriority(node.id, 'down');
-                        onUpdate(next);
-                      }}
-                      className="p-2 rounded bg-surface-container border border-outline-variant text-on-surface disabled:opacity-40 cursor-pointer"
-                      title="Ниже"
-                    >
-                      <ArrowDown size={13} />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={async () => {
-                        const next = await aegisApi.toggleNode(node.id, !node.enabled);
-                        onUpdate(next);
-                      }}
-                      className="px-2.5 py-1.5 min-h-[34px] rounded bg-surface-container border border-outline-variant text-[11px] text-on-surface cursor-pointer"
-                    >
-                      {node.enabled ? 'Вкл' : 'Выкл'}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={async () => {
-                        try {
-                          const next = await aegisApi.switchNode(node.id);
+                  <div className="flex items-center justify-between sm:justify-end gap-1.5 w-full sm:w-auto">
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        disabled={index === 0}
+                        onClick={async () => {
+                          const next = await aegisApi.moveNodePriority(node.id, 'up');
                           onUpdate(next);
-                          onNotify(`Подключено к «${node.name}»`);
-                        } catch (err) {
-                          onNotify(err instanceof Error ? err.message : 'Ошибка подключения', true);
-                        }
-                      }}
-                      className="px-2.5 py-1.5 min-h-[34px] rounded bg-primary-container text-on-primary font-badge-code text-[11px] font-bold flex items-center gap-1 cursor-pointer"
-                    >
-                      <Play size={12} />
-                      <span>{isCurrent ? 'Активен' : 'Старт'}</span>
-                    </button>
-                    {!node.isExternalClientBridge && (
+                        }}
+                        className="p-2 rounded-lg bg-surface-container border border-outline-variant text-on-surface disabled:opacity-40 cursor-pointer"
+                        title="Выше"
+                      >
+                        <ArrowUp size={13} />
+                      </button>
+                      <button
+                        type="button"
+                        disabled={index === snapshot.nodes.length - 1}
+                        onClick={async () => {
+                          const next = await aegisApi.moveNodePriority(node.id, 'down');
+                          onUpdate(next);
+                        }}
+                        className="p-2 rounded-lg bg-surface-container border border-outline-variant text-on-surface disabled:opacity-40 cursor-pointer"
+                        title="Ниже"
+                      >
+                        <ArrowDown size={13} />
+                      </button>
                       <button
                         type="button"
                         onClick={async () => {
-                          const next = await aegisApi.deleteNode(node.id);
+                          const next = await aegisApi.toggleNode(node.id, !node.enabled);
                           onUpdate(next);
-                          onNotify(`Сервер «${node.name}» удалён`);
                         }}
-                        className="p-2 rounded bg-error-container/30 border border-error/40 text-error cursor-pointer"
-                        title="Удалить"
+                        className="px-2.5 py-1.5 min-h-[34px] rounded-lg bg-surface-container border border-outline-variant text-[11px] text-on-surface cursor-pointer"
                       >
-                        <Trash2 size={13} />
+                        {node.enabled ? 'Вкл' : 'Выкл'}
                       </button>
-                    )}
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          try {
+                            const next = await aegisApi.switchNode(node.id);
+                            onUpdate(next);
+                            onNotify(`Подключено к «${node.name}»`);
+                          } catch (err) {
+                            onNotify(err instanceof Error ? err.message : 'Ошибка подключения', true);
+                          }
+                        }}
+                        className="px-3 py-1.5 min-h-[34px] rounded-lg bg-primary-container text-on-primary font-badge-code text-[11px] font-bold flex items-center gap-1 cursor-pointer"
+                      >
+                        <Play size={12} />
+                        <span>{isCurrent ? 'Активен' : 'Старт'}</span>
+                      </button>
+                      {!node.isExternalClientBridge && (
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            const next = await aegisApi.deleteNode(node.id);
+                            onUpdate(next);
+                            onNotify(`Сервер «${node.name}» удалён`);
+                          }}
+                          className="p-2 rounded-lg bg-error-container/30 border border-error/40 text-error cursor-pointer"
+                          title="Удалить"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
               );

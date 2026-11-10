@@ -126,8 +126,13 @@ jobs:
           else
             echo "Creating new latest release $PKG_VER with AegisMesh-VPN.apk..."
             gh release create "$PKG_VER" AegisMesh-VPN.apk AegisMesh-VPN.apk.sha256 \
-              --title "🛡️ AegisMesh VPN $PKG_VER (In-App Updater + Anti-DPI + 20 Test Suites)" \
-              --notes "Автоматическая сборка **AegisMesh VPN $PKG_VER** (\`versionCode 9\`) с встроенным автообновлением из GitHub Releases, анти-DPI защитой (\`uTLS Chrome\`, \`xudp\`, \`Port Hopping\`), защитой голосовых WebRTC/STUN сессий ИИ и 20 боевыми тестовыми наборами." \
+              --title "🛡️ AegisMesh VPN $PKG_VER (Stitch Tactical UI + In-App Updater + Anti-DPI)" \
+              --notes "Автоматическая сборка **AegisMesh VPN $PKG_VER** (\`versionCode 10\`) с обновлённым дизайном **Stitch Tactical Telemetry** (симметричная навигация на 100% ширины, центрированный Shield Orb, сетка телеметрии без обрезки IP), встроенным автообновлением из GitHub Releases и анти-DPI защитой (\`uTLS Chrome\`, \`xudp\`, \`Port Hopping\`)." \
               --latest
           fi
+          if [ "$PKG_VER" != "v3.6.0" ] && gh release view "v3.6.0" >/dev/null 2>&1; then
+            echo "Also syncing refreshed APK to v3.6.0 release asset..."
+            gh release upload "v3.6.0" AegisMesh-VPN.apk AegisMesh-VPN.apk.sha256 --clobber || true
+          fi
+
 

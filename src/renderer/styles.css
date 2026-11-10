@@ -39,6 +39,15 @@
 }
 
 html,
+body,
+#root {
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+}
+
+html,
 body {
   background-color: #070a0f;
   color: #dde2f2;
@@ -50,7 +59,6 @@ body {
   font-size: 14px;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
-  overflow-x: hidden;
   min-height: 100vh;
 }
 
@@ -233,13 +241,15 @@ body {
   bottom: 0;
   left: 0;
   right: 0;
+  width: 100%;
+  max-width: 100vw;
   height: calc(68px + env(safe-area-inset-bottom, 0px));
   padding-bottom: env(safe-area-inset-bottom, 0px);
   background: rgba(10, 15, 24, 0.96);
   backdrop-filter: blur(16px);
   border-top: 1px solid var(--border-subtle);
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   z-index: 50;
 }
 
@@ -249,9 +259,11 @@ body {
 }
 
 .tab-btn {
+  position: relative;
   appearance: none;
   background: transparent;
   border: none;
+  border-top: 2px solid transparent;
   color: var(--text-secondary);
   display: flex;
   flex-direction: column;
@@ -260,16 +272,23 @@ body {
   gap: 4px;
   min-height: 48px;
   font-family: var(--font-sans);
-  font-size: 10.5px;
+  font-size: 11px;
   font-weight: 600;
+  letter-spacing: 0.01em;
   cursor: pointer;
-  transition: color 0.18s ease, background-color 0.18s ease;
-  padding: 4px 2px;
+  transition: color 0.18s ease, background 0.18s ease, border-color 0.18s ease;
+  padding: 6px 4px;
+  text-align: center;
+}
+
+.tab-btn:hover {
+  color: var(--text-primary);
 }
 
 .tab-btn.active {
+  border-top: 2px solid var(--emerald-shield);
+  background: linear-gradient(180deg, rgba(0, 245, 155, 0.12) 0%, transparent 100%);
   color: var(--emerald-shield);
-  background: rgba(0, 245, 155, 0.07);
 }
 
 /* Десктопный режим Command Center (от 980px, если не включён мобильный предпросмотр) */

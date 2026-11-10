@@ -1,6 +1,6 @@
 {
   "name": "aegismesh-vpn",
-  "version": "3.6.0",
+  "version": "3.6.1",
   "description": "Кибербезопасный мультипротокольный VPN-клиент с умной автозаменой серверов (Auto-Failover), Kill Switch, Split Tunneling и мобильным режимом",
   "main": "dist/electron/electron/main.js",
   "scripts": {

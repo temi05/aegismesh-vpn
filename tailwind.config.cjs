@@ -54,9 +54,11 @@ module.exports = {
         'primary-fixed-dim': '#00e38f',
       },
       borderRadius: {
-        DEFAULT: '0.125rem',
-        lg: '0.25rem',
-        xl: '0.5rem',
+        DEFAULT: '0.5rem',
+        md: '0.625rem',
+        lg: '0.75rem',
+        xl: '1rem',
+        '2xl': '1.25rem',
         full: '9999px',
       },
       spacing: {

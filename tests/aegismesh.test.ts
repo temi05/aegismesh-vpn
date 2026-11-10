@@ -2052,16 +2052,18 @@ describe('19. Этап 15.2: In-App Updater (versionUpdater, сравнение 
     );
 
     // 1. Проверка normalizeSemver, compareSemver и isNewerSemver
-    expect(APP_VERSION).toBe('3.6.0');
-    expect(normalizeSemver('v3.6.0')).toBe('3.6.0');
+    expect(APP_VERSION).toBe('3.6.1');
+    expect(normalizeSemver('v3.6.1')).toBe('3.6.1');
     expect(normalizeSemver('V4.0.0-beta.1')).toBe('4.0.0');
     expect(compareSemver('3.5.0', 'v3.6.0')).toBe(-1);
-    expect(compareSemver('3.6.0', '3.6.0')).toBe(0);
-    expect(compareSemver('3.6.0', '3.5.9')).toBe(1);
+    expect(compareSemver('3.6.0', 'v3.6.1')).toBe(-1);
+    expect(compareSemver('3.6.1', '3.6.1')).toBe(0);
+    expect(compareSemver('3.6.1', '3.5.9')).toBe(1);
     expect(isNewerSemver('3.5.0', 'v3.6.0')).toBe(true);
-    expect(isNewerSemver('3.6.0', '3.6.0')).toBe(false);
-    expect(isNewerSemver('3.6.0', '3.5.9')).toBe(false);
-    expect(isNewerSemver('3.6.0', '4.0.0-beta.1')).toBe(true);
+    expect(isNewerSemver('3.6.0', 'v3.6.1')).toBe(true);
+    expect(isNewerSemver('3.6.1', '3.6.1')).toBe(false);
+    expect(isNewerSemver('3.6.1', '3.5.9')).toBe(false);
+    expect(isNewerSemver('3.6.1', '4.0.0-beta.1')).toBe(true);
 
     // 2. Разбор GitHub Release payload с APK-ассетом и фолбэк при пустом списке assets
     const mockRelease = {
@@ -2080,9 +2082,9 @@ describe('19. Этап 15.2: In-App Updater (versionUpdater, сравнение 
       ],
     };
 
-    const parsedUpdate = parseGitHubReleasePayload(mockRelease, '3.6.0');
+    const parsedUpdate = parseGitHubReleasePayload(mockRelease, '3.6.1');
     expect(parsedUpdate.updateAvailable).toBe(true);
-    expect(parsedUpdate.currentVersion).toBe('3.6.0');
+    expect(parsedUpdate.currentVersion).toBe('3.6.1');
     expect(parsedUpdate.latestVersion).toBe('3.7.0');
     expect(parsedUpdate.apkDownloadUrl).toBe(
       'https://github.com/temi05/aegismesh-vpn/releases/download/v3.7.0/AegisMesh-VPN.apk'
@@ -2091,7 +2093,7 @@ describe('19. Этап 15.2: In-App Updater (versionUpdater, сравнение 
 
     const fallbackRelease = parseGitHubReleasePayload(
       { tag_name: 'v3.8.0', assets: [] },
-      '3.6.0'
+      '3.6.1'
     );
     expect(fallbackRelease.updateAvailable).toBe(true);
     expect(fallbackRelease.apkDownloadUrl).toBe(
@@ -2124,7 +2126,7 @@ describe('19. Этап 15.2: In-App Updater (versionUpdater, сравнение 
 });
 
 describe('20. Этап 15.1: Валидация CI/CD (.github/workflows/ci.yml), AndroidManifest.xml и оффлайн-бандла', () => {
-  it('проверяет конвейер GitHub Actions для сборки AegisMesh-VPN.apk, синхронизацию версий 3.6.0, разрешения AndroidManifest и автономность index.html', async () => {
+  it('проверяет конвейер GitHub Actions для сборки AegisMesh-VPN.apk, синхронизацию версий 3.6.1, разрешения AndroidManifest и автономность index.html', async () => {
     const { APP_VERSION } = await import('../src/shared/versionUpdater');
     const rootDir = path.resolve(__dirname, '..');
 
@@ -2144,15 +2146,15 @@ describe('20. Этап 15.1: Валидация CI/CD (.github/workflows/ci.yml)
     const pkgJson = JSON.parse(
       fs.readFileSync(path.join(rootDir, 'package.json'), 'utf-8')
     ) as { version: string };
-    expect(pkgJson.version).toBe('3.6.0');
+    expect(pkgJson.version).toBe('3.6.1');
     expect(pkgJson.version).toBe(APP_VERSION);
 
     const buildGradle = fs.readFileSync(
       path.join(rootDir, 'android', 'app', 'build.gradle'),
       'utf-8'
     );
-    expect(buildGradle).toContain('versionName "3.6.0"');
-    expect(buildGradle).toContain('versionCode 9');
+    expect(buildGradle).toContain('versionName "3.6.1"');
+    expect(buildGradle).toContain('versionCode 10');
     expect(buildGradle).toContain('aegismesh-release.keystore');
 
     // 3. Проверка AndroidManifest.xml (VpnService, REQUEST_INSTALL_PACKAGES, FileProvider)

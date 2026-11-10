@@ -1,7 +1,7 @@
 // Модуль проверки обновлений и версионирования AegisMesh VPN v3.6 (GitHub Releases + OTA APK)
 import type { AppUpdateInfo } from './types';
 
-export const APP_VERSION = '3.6.0';
+export const APP_VERSION = '3.6.1';
 export const GITHUB_REPO_SLUG = 'temi05/aegismesh-vpn';
 export const GITHUB_RELEASES_LATEST_URL = `https://api.github.com/repos/${GITHUB_REPO_SLUG}/releases/latest`;
 export const GITHUB_RELEASES_PAGE_URL = `https://github.com/${GITHUB_REPO_SLUG}/releases`;

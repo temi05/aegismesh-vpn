@@ -319,7 +319,7 @@ export const App: React.FC = () => {
           <div className="space-y-3 pt-3 border-t border-outline-variant">
             <div className="p-2.5 rounded bg-surface-container-low border border-outline-variant font-telemetry-sm text-telemetry-sm space-y-1">
               <div className="flex justify-between items-center text-on-surface-variant">
-                <span>{`Версия: v${snapshot.appUpdate?.currentVersion || '3.6.0'}`}</span>
+                <span>{`Версия: v${snapshot.appUpdate?.currentVersion || '3.6.1'}`}</span>
                 <span className="text-primary-container font-mono font-bold">
                   {snapshot.appUpdate?.updateAvailable
                     ? `⬆️ v${snapshot.appUpdate.latestVersion}`
@@ -356,31 +356,36 @@ export const App: React.FC = () => {
         </aside>
       )}
 
-      {/* 2. ВЕРХНЯЯ ПАНЕЛЬ ТЕЛЕМЕТРИИ (Адаптивная под смартфон и ПК) */}
+      {/* 2. ВЕРХНЯЯ ПАНЕЛЬ ТЕЛЕМЕТРИИ (Адаптивная под смартфон и ПК — Stitch v3.6) */}
       <header
         className={`safe-top-header ${
           mobilePreview
             ? 'sticky top-0 left-0 right-0 px-3 pb-2.5'
-            : 'sticky md:fixed top-0 md:left-64 right-0 min-h-[3.75rem] px-3.5 md:px-6 pb-2 md:py-0'
-        } border-b border-outline-variant bg-surface-container-lowest z-40 flex justify-between items-center gap-2 select-none`}
+            : 'sticky md:fixed top-0 left-0 md:left-64 right-0 min-h-[3.75rem] px-3.5 md:px-6 pb-2.5 md:py-0'
+        } border-b border-outline-variant/70 bg-surface-container-lowest/95 backdrop-blur-md z-40 flex justify-between items-center gap-2 select-none`}
       >
         <div className="flex items-center gap-3 min-w-0">
-          <div className="flex items-center gap-2 min-w-0">
-            <div className="md:hidden w-8 h-8 rounded bg-surface-container-high border border-primary-container/60 flex items-center justify-center text-primary-container flex-shrink-0">
-              <TacticalIcon name="security" size={16} />
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="md:hidden w-9 h-9 rounded-xl bg-gradient-to-br from-primary-container/20 to-secondary-container/10 border border-primary-container/50 flex items-center justify-center text-primary-container flex-shrink-0">
+              <TacticalIcon name="security" size={18} />
             </div>
             <div className="min-w-0">
-              <span className="text-base md:text-headline-md font-headline-md text-primary font-bold tracking-tight truncate block">
-                AegisMesh VPN
-              </span>
-              <span className="md:hidden font-telemetry-sm text-[10px] text-on-surface-variant block truncate">
+              <div className="flex items-center gap-1.5 min-w-0">
+                <span className="text-sm sm:text-base md:text-headline-md font-headline-md text-primary-container font-bold tracking-wider uppercase truncate">
+                  AEGIS // MESH
+                </span>
+                <span className="font-badge-code text-[10px] text-secondary-container bg-secondary-container/10 px-1.5 py-0.5 rounded border border-secondary-container/30 flex-shrink-0">
+                  {`v${snapshot.appUpdate?.currentVersion || '3.6.1'}`}
+                </span>
+              </div>
+              <span className="md:hidden font-telemetry-sm text-[10px] text-on-surface-variant block truncate mt-0.5">
                 {isConnected && activeNode
                   ? `Работает: ${activeNode.providerName ? `${activeNode.providerName} • ` : ''}${activeNode.name}`
                   : isConnecting || isSwitching
                     ? 'Сквозная проверка туннеля...'
                     : isErrorState
                       ? 'Сбой подключения (VPN выкл.)'
-                      : `Серверов: ${userNodes.length}`}
+                      : `Автозамена готова • ${userNodes.length} серв.`}
               </span>
             </div>
           </div>
@@ -426,11 +431,18 @@ export const App: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-1.5 md:gap-2.5 flex-shrink-0">
+          {isConnected && activeLatency !== null && (
+            <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg border border-primary-container/35 bg-primary-container/10 text-primary-container font-telemetry-sm text-[11px] font-bold">
+              <span className="w-1.5 h-1.5 rounded-full bg-primary-container animate-pulse" />
+              <span>{activeLatency} мс</span>
+            </div>
+          )}
+
           {!mobilePreview && (
             <button
               type="button"
               onClick={() => setActiveTab('nodes')}
-              className="hidden sm:flex px-3 py-1.5 rounded bg-surface-container-high hover:bg-surface-variant border border-outline-variant text-on-surface font-telemetry-md text-telemetry-md items-center gap-1.5 transition-all cursor-pointer"
+              className="hidden sm:flex px-3 py-1.5 rounded-lg bg-surface-container-high hover:bg-surface-variant border border-outline-variant text-on-surface font-telemetry-md text-telemetry-md items-center gap-1.5 transition-all cursor-pointer"
             >
               <TacticalIcon name="cloud_upload" size={15} />
               <span>ДОБАВИТЬ VPN</span>
@@ -442,7 +454,7 @@ export const App: React.FC = () => {
               type="button"
               onClick={handleToggleMobileWidget}
               title="Переключить компактный мобильный вид или полный экран ПК"
-              className="hidden sm:flex px-2.5 py-1.5 rounded bg-surface-container-high hover:bg-surface-variant border border-outline-variant text-secondary font-telemetry-sm text-telemetry-sm items-center gap-1.5 transition-all cursor-pointer"
+              className="hidden sm:flex px-2.5 py-1.5 rounded-lg bg-surface-container-high hover:bg-surface-variant border border-outline-variant text-secondary font-telemetry-sm text-telemetry-sm items-center gap-1.5 transition-all cursor-pointer"
             >
               {mobilePreview ? (
                 <>
@@ -467,17 +479,17 @@ export const App: React.FC = () => {
                   `Доступно обновление AegisMesh VPN v${snapshot.appUpdate?.latestVersion} — откройте Центр обновлений`
                 );
               }}
-              className="px-2.5 py-1.5 min-h-[36px] rounded bg-primary-container/20 hover:bg-primary-container/30 border border-primary-container text-primary-container shield-glow font-badge-code text-[11px] font-bold flex items-center gap-1 transition-all cursor-pointer"
+              className="px-2.5 py-1.5 min-h-[36px] rounded-lg bg-primary-container/20 hover:bg-primary-container/30 border border-primary-container text-primary-container shield-glow font-badge-code text-[11px] font-bold flex items-center gap-1 transition-all cursor-pointer"
               title="Открыть Центр обновлений AegisMesh VPN"
             >
-              <span>{`⬆️ Обновление v${snapshot.appUpdate.latestVersion}`}</span>
+              <span>{`⬆️ v${snapshot.appUpdate.latestVersion}`}</span>
             </button>
           )}
 
           <button
             type="button"
             onClick={handlePingAll}
-            className="w-9 h-9 rounded flex items-center justify-center text-on-surface-variant hover:text-primary bg-surface-container md:bg-transparent border border-outline-variant md:border-none transition-all cursor-pointer"
+            className="w-9 h-9 rounded-lg flex items-center justify-center text-on-surface-variant hover:text-primary-container bg-surface-container border border-outline-variant/60 transition-all cursor-pointer"
             title="Проверить пинг ваших серверов"
           >
             <TacticalIcon name="sync" size={16} />
@@ -487,14 +499,17 @@ export const App: React.FC = () => {
             type="button"
             disabled={busyAction}
             onClick={handlePowerAction}
-            className={`px-3 py-2 md:py-1.5 min-h-[38px] rounded font-badge-code text-badge-code tracking-wider active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer ${
+            className={`px-2.5 sm:px-3 py-1.5 min-h-[36px] rounded-lg font-badge-code text-badge-code tracking-wider active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer ${
               isConnected
                 ? 'bg-error-container text-white border border-error/40 crimson-glow hover:bg-error-container/90'
                 : 'bg-primary-container text-on-primary border border-primary-container shield-glow hover:opacity-95'
             }`}
           >
             <TacticalIcon name={isConnected ? 'power_settings_new' : 'bolt'} size={15} />
-            <span>{isConnected ? 'ОТКЛЮЧИТЬ' : 'ПОДКЛЮЧИТЬ'}</span>
+            <span className="sm:hidden">{isConnected ? 'СТОП' : 'ПОДКЛ.'}</span>
+            <span className="hidden sm:inline">
+              {isConnected ? 'ОТКЛЮЧИТЬ' : 'ПОДКЛЮЧИТЬ'}
+            </span>
           </button>
         </div>
       </header>
@@ -504,7 +519,7 @@ export const App: React.FC = () => {
         <div
           className={`${
             mobilePreview ? 'mx-3 mt-2' : 'md:ml-64 md:mt-20 mx-3.5 md:mx-6 mt-2.5'
-          } p-3 rounded border font-telemetry-md text-telemetry-md flex items-center justify-between z-30 ${
+          } p-3 rounded-lg border font-telemetry-md text-telemetry-md flex items-center justify-between z-30 ${
             toast.isError
               ? 'bg-error-container/30 border-error text-error'
               : 'bg-primary-container/15 border-primary-container text-primary'
@@ -528,7 +543,7 @@ export const App: React.FC = () => {
             mobilePreview ? 'p-4' : 'md:ml-64 md:mt-16 p-4 md:p-6'
           } flex-1 flex items-center justify-center`}
         >
-          <div className="max-w-md w-full rounded bg-surface border border-primary-container/50 p-6 shield-glow space-y-4">
+          <div className="max-w-md w-full rounded-xl bg-surface border border-primary-container/50 p-6 shield-glow space-y-4">
             <div className="flex items-center gap-2 text-primary font-headline-md text-headline-md">
               <Lock size={20} className="text-primary-container" />
               <span>Криптосейф заблокирован</span>
@@ -538,14 +553,14 @@ export const App: React.FC = () => {
             </p>
             <input
               type="password"
-              className="w-full bg-[#070A0F] border border-outline-variant rounded p-3 text-on-surface font-telemetry-sm text-telemetry-sm focus:border-primary-container focus:outline-none"
+              className="w-full bg-[#070A0F] border border-outline-variant rounded-lg p-3 text-on-surface font-telemetry-sm text-telemetry-sm focus:border-primary-container focus:outline-none"
               placeholder="Ваш PIN-код..."
               value={unlockPin}
               onChange={(e) => setUnlockPin(e.target.value)}
             />
             <button
               type="button"
-              className="w-full py-3 px-4 rounded bg-primary-container text-on-primary font-badge-code text-badge-code tracking-wider uppercase cursor-pointer"
+              className="w-full py-3 px-4 rounded-lg bg-primary-container text-on-primary font-badge-code text-badge-code tracking-wider uppercase cursor-pointer"
               onClick={async () => {
                 try {
                   const next = await aegisApi.unlockVault(unlockPin);
@@ -562,38 +577,46 @@ export const App: React.FC = () => {
           </div>
         </div>
       ) : (
-        <main
+        <div
           className={
             mobilePreview
-              ? 'p-3 flex-1'
-              : `md:ml-64 ${toast ? 'mt-2' : 'md:mt-16'} p-3.5 md:p-6 flex-1 min-h-[calc(100vh-4rem)]`
+              ? 'w-full flex-1'
+              : `w-full md:pl-64 ${toast ? 'mt-2' : 'md:mt-16'} flex-1 min-h-[calc(100vh-4rem)]`
           }
         >
-          {activeTab === 'shield' && (
-            <ShieldCascadeView
-              snapshot={snapshot}
-              onUpdate={setSnapshot}
-              onNotify={showToast}
-              onGoToNodes={() => setActiveTab('nodes')}
-            />
-          )}
-          {activeTab === 'nodes' && (
-            <NodesVaultView snapshot={snapshot} onUpdate={setSnapshot} onNotify={showToast} />
-          )}
-          {activeTab === 'routing' && (
-            <RoutingSecurityView snapshot={snapshot} onUpdate={setSnapshot} onNotify={showToast} />
-          )}
-          {activeTab === 'audit' && (
-            <DiagnosticsAuditView
-              snapshot={snapshot}
-              onUpdate={setSnapshot}
-              onNotify={showToast}
-            />
-          )}
-        </main>
+          <main
+            className={
+              mobilePreview
+                ? 'w-full p-3'
+                : 'w-full max-w-lg md:max-w-5xl mx-auto px-3.5 md:px-6 pt-3 pb-6'
+            }
+          >
+            {activeTab === 'shield' && (
+              <ShieldCascadeView
+                snapshot={snapshot}
+                onUpdate={setSnapshot}
+                onNotify={showToast}
+                onGoToNodes={() => setActiveTab('nodes')}
+              />
+            )}
+            {activeTab === 'nodes' && (
+              <NodesVaultView snapshot={snapshot} onUpdate={setSnapshot} onNotify={showToast} />
+            )}
+            {activeTab === 'routing' && (
+              <RoutingSecurityView snapshot={snapshot} onUpdate={setSnapshot} onNotify={showToast} />
+            )}
+            {activeTab === 'audit' && (
+              <DiagnosticsAuditView
+                snapshot={snapshot}
+                onUpdate={setSnapshot}
+                onNotify={showToast}
+              />
+            )}
+          </main>
+        </div>
       )}
 
-      {/* Нижняя панель навигации для смартфонов (Thumb Zone >= 68px, кнопки >= 48px) */}
+      {/* Нижняя панель навигации для смартфонов (Thumb Zone >= 68px, 4 колонки на всю ширину) */}
       <nav className={`bottom-tab-bar ${mobilePreview ? '' : 'md:hidden'}`}>
         {NAV_ITEMS.map((item) => (
           <button
@@ -603,7 +626,7 @@ export const App: React.FC = () => {
             onClick={() => setActiveTab(item.id)}
           >
             {item.icon}
-            <span>{item.shortLabel}</span>
+            <span className="truncate max-w-full">{item.shortLabel}</span>
           </button>
         ))}
       </nav>

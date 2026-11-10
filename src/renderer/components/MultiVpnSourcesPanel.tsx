@@ -38,6 +38,25 @@ export const MultiVpnSourcesPanel: React.FC<Props> = ({
       : externalClients.slice(0, 3);
 
   const manualChecked = snapshot.manualGroupEnabledInFailover !== false;
+  const activeNode =
+    snapshot.connectionState === 'connected'
+      ? snapshot.nodes.find((n) => n.id === snapshot.activeNodeId) || null
+      : null;
+
+  let hasAssignedActive = false;
+  let reserveIndex = 0;
+
+  const resolveCascadeRole = (checked: boolean, matchesActiveNode: boolean) => {
+    if (!checked) {
+      return { role: 'off' as const, label: 'ВЫКЛ' };
+    }
+    if (matchesActiveNode || (!activeNode && !hasAssignedActive)) {
+      hasAssignedActive = true;
+      return { role: 'active' as const, label: 'СЕЙЧАС АКТИВЕН' };
+    }
+    reserveIndex += 1;
+    return { role: 'reserve' as const, label: `РЕЗЕРВ #${reserveIndex}` };
+  };
 
   const handleScanClients = async () => {
     setScanning(true);
@@ -58,8 +77,10 @@ export const MultiVpnSourcesPanel: React.FC<Props> = ({
   };
 
   return (
-    <div className="rounded-lg bg-surface border border-outline-variant p-4 space-y-3">
-      <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-outline-variant">
+    <div className="rounded-xl relative overflow-hidden bg-surface border border-outline-variant p-4 md:p-5 space-y-3.5">
+      <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-primary-container via-secondary-container to-primary-container opacity-75" />
+
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-2.5 border-b border-outline-variant">
         <div>
           <h3 className="font-headline-md text-sm md:text-base text-on-surface font-bold flex items-center gap-2">
             <TacticalIcon name="hub" size={17} className="text-primary-container" />
@@ -70,12 +91,16 @@ export const MultiVpnSourcesPanel: React.FC<Props> = ({
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div
+          className={`${
+            onAddMore ? 'grid grid-cols-2 sm:flex' : 'flex'
+          } items-center gap-2 w-full sm:w-auto flex-shrink-0`}
+        >
           <button
             type="button"
             disabled={scanning}
             onClick={handleScanClients}
-            className="px-2.5 py-1.5 min-h-[38px] rounded bg-surface-container-high hover:bg-surface-variant border border-secondary-container/50 text-secondary font-badge-code text-[11px] flex items-center gap-1.5 cursor-pointer"
+            className="w-full sm:w-auto px-3 py-2 min-h-[38px] rounded-lg bg-surface-container-high hover:bg-surface-variant border border-secondary-container/50 text-secondary font-badge-code text-[11px] flex items-center justify-center gap-1.5 cursor-pointer"
           >
             {scanning ? <RefreshCw size={13} className="animate-spin" /> : <Radar size={14} />}
             <span>{scanning ? 'Поиск...' : 'Найти клиенты'}</span>
@@ -84,7 +109,7 @@ export const MultiVpnSourcesPanel: React.FC<Props> = ({
             <button
               type="button"
               onClick={onAddMore}
-              className="px-2.5 py-1.5 min-h-[38px] rounded bg-primary-container/15 hover:bg-primary-container/25 border border-primary-container/40 text-primary font-badge-code text-[11px] flex items-center gap-1 cursor-pointer"
+              className="w-full sm:w-auto px-3 py-2 min-h-[38px] rounded-lg bg-primary-container/15 hover:bg-primary-container/25 border border-primary-container/40 text-primary font-badge-code text-[11px] flex items-center justify-center gap-1 cursor-pointer"
             >
               <Plus size={13} />
               <span>Добавить</span>
@@ -93,7 +118,7 @@ export const MultiVpnSourcesPanel: React.FC<Props> = ({
         </div>
       </div>
 
-      <div className="space-y-2">
+      <div className="space-y-2.5">
         {/* Уровень 1А: Независимые подписки (разные VPN-сервисы) */}
         {snapshot.subscriptions.map((sub, idx) => {
           const checked = sub.enabledInFailover !== false;
@@ -101,6 +126,9 @@ export const MultiVpnSourcesPanel: React.FC<Props> = ({
           const aliveCount = subNodes.filter(
             (n) => n.status !== 'down' && n.status !== 'quarantined'
           ).length;
+          const isSubActive = Boolean(activeNode && activeNode.subscriptionId === sub.id);
+          const cascadeBadge = resolveCascadeRole(checked, isSubActive);
+
           return (
             <div
               key={sub.id}
@@ -108,17 +136,19 @@ export const MultiVpnSourcesPanel: React.FC<Props> = ({
                 const next = await aegisApi.toggleSubscriptionFailover(sub.id, !checked);
                 onUpdate(next);
               }}
-              className={`p-3 rounded-lg border flex items-center justify-between gap-3 cursor-pointer transition-colors ${
-                checked
-                  ? 'bg-surface-container-lowest border-primary-container/50'
-                  : 'bg-surface-container-lowest/50 border-outline-variant opacity-70'
+              className={`p-3.5 rounded-xl border flex items-center justify-between gap-3 cursor-pointer transition-colors ${
+                cascadeBadge.role === 'active'
+                  ? 'bg-primary-container/10 border-primary-container/60'
+                  : checked
+                    ? 'bg-surface-container-lowest border-secondary-container/45'
+                    : 'bg-surface-container-lowest/50 border-outline-variant opacity-70'
               }`}
             >
               <div className="flex items-center gap-3 min-w-0">
                 <div
-                  className={`w-6 h-6 rounded flex items-center justify-center flex-shrink-0 border ${
+                  className={`w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0 border ${
                     checked
-                      ? 'bg-primary-container text-on-primary border-primary-container'
+                      ? 'bg-primary-container text-on-primary border-primary-container shadow-sm'
                       : 'bg-surface-container border-outline'
                   }`}
                 >
@@ -142,56 +172,91 @@ export const MultiVpnSourcesPanel: React.FC<Props> = ({
                   </div>
                 </div>
               </div>
-              <span className="font-badge-code text-[10px] text-on-surface-variant flex-shrink-0">
-                {checked ? 'В АВТОЗАМЕНЕ' : 'ВЫКЛ'}
+              <span
+                className={`font-badge-code text-[10px] px-2 py-1 rounded border flex-shrink-0 font-bold ${
+                  cascadeBadge.role === 'active'
+                    ? 'bg-primary-container/20 border-primary-container/50 text-primary-container'
+                    : cascadeBadge.role === 'reserve'
+                      ? 'bg-secondary-container/15 border-secondary-container/40 text-secondary'
+                      : 'bg-surface-container border-outline-variant text-on-surface-variant'
+                }`}
+              >
+                {cascadeBadge.label}
               </span>
             </div>
           );
         })}
 
         {/* Уровень 1Б: Группа личных ключей (Outline / WireGuard / VLESS) */}
-        {manualNodes.length > 0 && (
-          <div
-            onClick={async () => {
-              const next = await aegisApi.toggleManualGroupFailover(!manualChecked);
-              onUpdate(next);
-            }}
-            className={`p-3 rounded-lg border flex items-center justify-between gap-3 cursor-pointer transition-colors ${
-              manualChecked
-                ? 'bg-surface-container-lowest border-primary-container/50'
-                : 'bg-surface-container-lowest/50 border-outline-variant opacity-70'
-            }`}
-          >
-            <div className="flex items-center gap-3 min-w-0">
-              <div
-                className={`w-6 h-6 rounded flex items-center justify-center flex-shrink-0 border ${
-                  manualChecked
-                    ? 'bg-primary-container text-on-primary border-primary-container'
-                    : 'bg-surface-container border-outline'
+        {manualNodes.length > 0 && (() => {
+          const isManualActive = Boolean(
+            activeNode &&
+              !activeNode.subscriptionId &&
+              !activeNode.isExternalClientBridge &&
+              !activeNode.isTestStand
+          );
+          const cascadeBadge = resolveCascadeRole(manualChecked, isManualActive);
+
+          return (
+            <div
+              onClick={async () => {
+                const next = await aegisApi.toggleManualGroupFailover(!manualChecked);
+                onUpdate(next);
+              }}
+              className={`p-3.5 rounded-xl border flex items-center justify-between gap-3 cursor-pointer transition-colors ${
+                cascadeBadge.role === 'active'
+                  ? 'bg-primary-container/10 border-primary-container/60'
+                  : manualChecked
+                    ? 'bg-surface-container-lowest border-secondary-container/45'
+                    : 'bg-surface-container-lowest/50 border-outline-variant opacity-70'
+              }`}
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <div
+                  className={`w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0 border ${
+                    manualChecked
+                      ? 'bg-primary-container text-on-primary border-primary-container shadow-sm'
+                      : 'bg-surface-container border-outline'
+                  }`}
+                >
+                  {manualChecked && <Check size={15} strokeWidth={3} />}
+                </div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="font-headline-md text-sm text-on-surface font-bold">
+                      Личные ключи (VLESS / WG / SS)
+                    </span>
+                  </div>
+                  <div className="font-telemetry-sm text-[11px] text-on-surface-variant mt-0.5">
+                    Серверов в группе: <strong className="text-on-surface">{manualNodes.length}</strong>
+                  </div>
+                </div>
+              </div>
+              <span
+                className={`font-badge-code text-[10px] px-2 py-1 rounded border flex-shrink-0 font-bold ${
+                  cascadeBadge.role === 'active'
+                    ? 'bg-primary-container/20 border-primary-container/50 text-primary-container'
+                    : cascadeBadge.role === 'reserve'
+                      ? 'bg-secondary-container/15 border-secondary-container/40 text-secondary'
+                      : 'bg-surface-container border-outline-variant text-on-surface-variant'
                 }`}
               >
-                {manualChecked && <Check size={15} strokeWidth={3} />}
-              </div>
-              <div className="min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className="font-headline-md text-sm text-on-surface font-bold">
-                    Личные ключи (VLESS / WG / SS)
-                  </span>
-                </div>
-                <div className="font-telemetry-sm text-[11px] text-on-surface-variant mt-0.5">
-                  Серверов в группе: <strong className="text-on-surface">{manualNodes.length}</strong>
-                </div>
-              </div>
+                {cascadeBadge.label}
+              </span>
             </div>
-            <span className="font-badge-code text-[10px] text-on-surface-variant flex-shrink-0">
-              {manualChecked ? 'В АВТОЗАМЕНЕ' : 'ВЫКЛ'}
-            </span>
-          </div>
-        )}
+          );
+        })()}
 
         {/* Уровень 2: Локальные мосты к внешним запущенным VPN-клиентам (127.0.0.1) */}
         {displayedClients.map((bridge) => {
           const checked = bridge.enabledInFailover;
+          const isBridgeActive = Boolean(
+            activeNode &&
+              activeNode.isExternalClientBridge &&
+              activeNode.port === bridge.port
+          );
+          const cascadeBadge = resolveCascadeRole(checked, isBridgeActive);
+
           return (
             <div
               key={bridge.id}
@@ -199,19 +264,21 @@ export const MultiVpnSourcesPanel: React.FC<Props> = ({
                 const next = await aegisApi.toggleExternalClient(bridge.id, !checked);
                 onUpdate(next);
               }}
-              className={`p-3 rounded-lg border flex items-center justify-between gap-3 cursor-pointer transition-colors ${
-                checked && bridge.detectedRunning
-                  ? 'bg-surface-container-lowest border-secondary-container/70'
-                  : checked
-                    ? 'bg-surface-container-lowest border-[#FFB020]/50'
-                    : 'bg-surface-container-lowest/40 border-outline-variant opacity-80'
+              className={`p-3.5 rounded-xl border flex items-center justify-between gap-3 cursor-pointer transition-colors ${
+                cascadeBadge.role === 'active'
+                  ? 'bg-primary-container/10 border-primary-container/60'
+                  : checked && bridge.detectedRunning
+                    ? 'bg-surface-container-lowest border-secondary-container/70'
+                    : checked
+                      ? 'bg-surface-container-lowest border-[#FFB020]/50'
+                      : 'bg-surface-container-lowest/40 border-outline-variant opacity-80'
               }`}
             >
               <div className="flex items-center gap-3 min-w-0">
                 <div
-                  className={`w-6 h-6 rounded flex items-center justify-center flex-shrink-0 border ${
+                  className={`w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0 border ${
                     checked
-                      ? 'bg-secondary-container text-[#041318] border-secondary-container'
+                      ? 'bg-secondary-container text-[#041318] border-secondary-container shadow-sm'
                       : 'bg-surface-container border-outline'
                   }`}
                 >
@@ -248,8 +315,16 @@ export const MultiVpnSourcesPanel: React.FC<Props> = ({
                   </div>
                 </div>
               </div>
-              <span className="font-badge-code text-[10px] text-secondary flex-shrink-0">
-                МОСТ
+              <span
+                className={`font-badge-code text-[10px] px-2 py-1 rounded border flex-shrink-0 font-bold ${
+                  cascadeBadge.role === 'active'
+                    ? 'bg-primary-container/20 border-primary-container/50 text-primary-container'
+                    : cascadeBadge.role === 'reserve'
+                      ? 'bg-secondary-container/15 border-secondary-container/40 text-secondary'
+                      : 'bg-surface-container border-outline-variant text-secondary'
+                }`}
+              >
+                {checked ? cascadeBadge.label : 'МОСТ'}
               </span>
             </div>
           );
@@ -259,7 +334,7 @@ export const MultiVpnSourcesPanel: React.FC<Props> = ({
           <button
             type="button"
             onClick={() => setShowAllClients((v) => !v)}
-            className="w-full py-2 px-3 rounded bg-surface-container-low hover:bg-surface-container border border-outline-variant text-xs text-on-surface-variant flex items-center justify-center gap-1.5 cursor-pointer"
+            className="w-full py-2.5 px-3 rounded-lg bg-surface-container-low hover:bg-surface-container border border-outline-variant text-xs text-on-surface-variant flex items-center justify-center gap-1.5 cursor-pointer"
           >
             {showAllClients ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
             <span>

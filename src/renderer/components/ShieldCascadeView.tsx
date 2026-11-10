@@ -287,9 +287,9 @@ export const ShieldCascadeView: React.FC<Props> = ({
         </div>
       )}
 
-      {/* 1. КАРТОЧКА ЧЕСТНОГО СТАТУСА VPN (HERO CARD) */}
+      {/* 1. КАРТОЧКА ЧЕСТНОГО СТАТУСА VPN (HERO CARD — STITCH TACTICAL TELEMETRY v3.6) */}
       <div
-        className={`relative overflow-hidden rounded-xl bg-surface p-4 md:p-6 border transition-all ${
+        className={`relative overflow-hidden rounded-2xl bg-surface p-4 md:p-6 border transition-all ${
           isVerifiedConnected
             ? 'border-primary-container/80 shield-glow'
             : isVerifying || busy
@@ -299,44 +299,57 @@ export const ShieldCascadeView: React.FC<Props> = ({
                 : 'border-outline-variant'
         }`}
       >
-        <div className="flex flex-col md:flex-row items-center justify-between gap-5">
-          {/* Левая часть: понятный статус и кнопка */}
-          <div className="flex flex-col items-center md:items-start text-center md:text-left space-y-3 flex-1 w-full">
-            <div
-              className={`inline-flex items-center gap-2 px-3 py-1 rounded-full border font-badge-code text-xs font-bold ${
-                isVerifiedConnected
-                  ? 'bg-primary-container/15 border-primary-container/50 text-primary-container'
-                  : isVerifying || busy
-                    ? 'bg-[#FFB020]/15 border-[#FFB020]/50 text-[#FFB020]'
-                    : isError
-                      ? 'bg-error-container/30 border-error/50 text-error'
-                      : 'bg-surface-container-high border-outline-variant text-on-surface-variant'
-              }`}
-            >
-              <span
-                className={`w-2.5 h-2.5 rounded-full ${
+        {/* Фирменный верхний градиентный акцент Stitch и мягкое радиальное свечение */}
+        <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-secondary-container via-primary-container to-secondary-container opacity-80" />
+        <div className="pointer-events-none absolute -top-24 left-1/2 -translate-x-1/2 w-72 h-40 rounded-full bg-primary-container/10 blur-3xl" />
+
+        <div className="relative grid grid-cols-1 md:grid-cols-[1fr_auto] gap-4 items-center">
+          {/* Верхний блок статуса и заголовка узла */}
+          <div className="order-1 md:col-start-1 md:row-start-1 flex flex-col items-center md:items-start text-center md:text-left space-y-2.5 w-full min-w-0">
+            <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 w-full">
+              <div
+                className={`inline-flex items-center gap-2 px-3 py-1 rounded-full border font-badge-code text-[11px] font-bold ${
                   isVerifiedConnected
-                    ? 'bg-primary-container animate-pulse'
+                    ? 'bg-primary-container/15 border-primary-container/50 text-primary-container'
                     : isVerifying || busy
-                      ? 'bg-[#FFB020] animate-ping'
+                      ? 'bg-[#FFB020]/15 border-[#FFB020]/50 text-[#FFB020]'
                       : isError
-                        ? 'bg-error'
-                        : 'bg-outline'
+                        ? 'bg-error-container/30 border-error/50 text-error'
+                        : 'bg-surface-container-high border-outline-variant text-on-surface-variant'
                 }`}
-              />
-              <span>
-                {isVerifiedConnected
-                  ? 'VPN РАБОТАЕТ • ТУННЕЛЬ ПРОВЕРЕН'
-                  : isVerifying || busy
-                    ? 'ПРОВЕРКА ТУННЕЛЯ...'
-                    : isError
-                      ? 'СБОЙ ПОДКЛЮЧЕНИЯ • VPN ВЫКЛЮЧЕН'
-                      : 'VPN ВЫКЛЮЧЕН'}
+              >
+                <span
+                  className={`w-2 h-2 rounded-full flex-shrink-0 ${
+                    isVerifiedConnected
+                      ? 'bg-primary-container animate-pulse'
+                      : isVerifying || busy
+                        ? 'bg-[#FFB020] animate-ping'
+                        : isError
+                          ? 'bg-error'
+                          : 'bg-outline'
+                  }`}
+                />
+                <span>
+                  {isVerifiedConnected
+                    ? 'VPN РАБОТАЕТ • ТУННЕЛЬ ПРОВЕРЕН'
+                    : isVerifying || busy
+                      ? 'ПРОВЕРКА ТУННЕЛЯ...'
+                      : isError
+                        ? 'СБОЙ ПОДКЛЮЧЕНИЯ • VPN ВЫКЛЮЧЕН'
+                        : 'VPN ВЫКЛЮЧЕН'}
+                </span>
+              </div>
+
+              <span className="font-badge-code text-[10px] px-2 py-1 rounded-full bg-surface-container-high border border-outline-variant/60 text-secondary">
+                {activeNode ? `${activeNode.protocol.toUpperCase()} • ` : ''}
+                {snapshot.telemetry?.physicalNetworkType === 'cellular'
+                  ? '📶 LTE'
+                  : '🏠 Wi-Fi'}
               </span>
             </div>
 
-            <div>
-              <h2 className="font-headline-lg text-lg md:text-2xl text-on-surface font-bold">
+            <div className="w-full min-w-0">
+              <h2 className="font-headline-lg text-xl md:text-2xl text-on-surface font-bold text-center md:text-left">
                 {isVerifiedConnected && activeNode
                   ? activeNode.name
                   : isVerifying || busy
@@ -347,7 +360,7 @@ export const ShieldCascadeView: React.FC<Props> = ({
                         ? `Готово к защите (${activePoolNodes.length} серв. в автозамене)`
                         : 'Добавьте свой VPN или включите внешний клиент'}
               </h2>
-              <p className="font-body-sm text-xs text-on-surface-variant mt-1">
+              <p className="font-body-sm text-xs text-on-surface-variant mt-1 text-center md:text-left">
                 {isVerifiedConnected && activeNode
                   ? `Источник: ${activeNode.providerName || 'Мои VPN'} • Протокол: ${activeNode.protocol.toUpperCase()}`
                   : isError
@@ -356,8 +369,53 @@ export const ShieldCascadeView: React.FC<Props> = ({
                     : 'Значок «Работает» загорается только после реальной проверки связи сквозь VPN-туннель.'}
               </p>
             </div>
+          </div>
 
-            {/* Кнопка аварийного запуска стороннего закрытого Android VPN-приложения (Уровень 3) */}
+          {/* Центральная тактическая кнопка-щит (Tactical Shield Orb) */}
+          <div className="order-2 md:col-start-2 md:row-start-1 md:row-span-2 flex justify-center py-1 md:py-0">
+            <button
+              type="button"
+              disabled={busy}
+              onClick={handleToggleVpn}
+              className={`w-36 h-36 md:w-40 md:h-40 rounded-full flex-shrink-0 border-2 flex flex-col items-center justify-center text-center p-3 active:scale-95 transition-all cursor-pointer ${
+                isVerifiedConnected
+                  ? 'bg-gradient-to-b from-[#0f2922] to-[#081715] border-primary-container ring-4 ring-primary-container/15 shield-glow'
+                  : isVerifying || busy
+                    ? 'bg-gradient-to-b from-[#29200f] to-[#171208] border-[#FFB020] ring-4 ring-[#FFB020]/15'
+                    : 'bg-gradient-to-b from-[#131D29] to-[#0A1018] border-secondary-container/70 ring-4 ring-secondary-container/15 cyan-glow'
+              }`}
+            >
+              <div
+                className={`w-11 h-11 rounded-full flex items-center justify-center mb-1.5 ${
+                  isVerifiedConnected
+                    ? 'bg-primary-container/20 text-primary-container'
+                    : isVerifying || busy
+                      ? 'bg-[#FFB020]/20 text-[#FFB020]'
+                      : 'bg-secondary-container/20 text-secondary'
+                }`}
+              >
+                <TacticalIcon
+                  name={isVerifiedConnected ? 'shield' : 'power_settings_new'}
+                  size={24}
+                />
+              </div>
+              <span className="font-badge-code text-xs font-bold tracking-wider text-on-surface">
+                {isVerifying || busy
+                  ? 'ПРОВЕРКА...'
+                  : isVerifiedConnected
+                    ? 'ОТКЛЮЧИТЬ'
+                    : 'ВКЛЮЧИТЬ VPN'}
+              </span>
+              <span className="font-telemetry-sm text-[11px] text-on-surface-variant font-mono mt-0.5">
+                {isVerifiedConnected
+                  ? formatSessionClock(snapshot.connectedSince, now)
+                  : 'АВТОЗАМЕНА'}
+              </span>
+            </button>
+          </div>
+
+          {/* Симметричная сетка быстрых действий (под Щитом на смартфонах, слева на ПК) */}
+          <div className="order-3 md:col-start-1 md:row-start-2 w-full space-y-2">
             {isError && emergencyApp && (
               <button
                 type="button"
@@ -369,86 +427,45 @@ export const ShieldCascadeView: React.FC<Props> = ({
                     onNotify(err instanceof Error ? err.message : 'Не удалось открыть приложение', true);
                   }
                 }}
-                className="w-full sm:w-auto px-4 py-2.5 min-h-[44px] rounded-lg bg-[#FFB020] text-[#0A0E14] font-badge-code text-xs font-bold flex items-center justify-center gap-2 cursor-pointer"
+                className="w-full px-4 py-2.5 min-h-[44px] rounded-xl bg-[#FFB020] text-[#0A0E14] font-badge-code text-xs font-bold flex items-center justify-center gap-2 cursor-pointer"
               >
                 <ExternalLink size={15} />
                 <span>Открыть резервный VPN: {emergencyApp.appName}</span>
               </button>
             )}
 
-            {/* Быстрые действия в 1 тап */}
-            <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 pt-1 w-full">
-              {activePoolNodes.length > 0 && (
-                <button
-                  type="button"
-                  disabled={busy}
-                  onClick={() => void handleSmartOptimize()}
-                  className="px-3.5 py-2.5 min-h-[44px] rounded-lg bg-primary-container/15 hover:bg-primary-container/25 border border-primary-container/60 text-primary-container font-telemetry-md text-xs font-bold flex items-center gap-1.5 cursor-pointer"
-                >
-                  <Zap size={15} />
-                  <span>⚡ Турбо-подбор лучшего VPN</span>
-                </button>
-              )}
+            {activePoolNodes.length > 0 && (
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => void handleSmartOptimize()}
+                className="w-full py-2.5 px-4 min-h-[44px] rounded-xl bg-primary-container/15 hover:bg-primary-container/25 border border-primary-container/60 text-primary-container font-telemetry-md text-xs font-bold flex items-center justify-center gap-2 transition-colors cursor-pointer"
+              >
+                <Zap size={15} />
+                <span>⚡ Турбо-подбор лучшего VPN</span>
+              </button>
+            )}
+
+            <div className="grid grid-cols-2 gap-2 w-full">
               <button
                 type="button"
                 disabled={busy}
                 onClick={() => void handleOneTapPasteImport()}
-                className="px-3.5 py-2.5 min-h-[44px] rounded-lg bg-surface-container-high hover:bg-surface-variant border border-primary-container/40 text-primary font-telemetry-md text-xs font-semibold flex items-center gap-1.5 cursor-pointer"
+                className="w-full py-2.5 px-3 min-h-[44px] rounded-xl bg-surface-container-high hover:bg-surface-variant border border-primary-container/40 text-primary font-telemetry-md text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
               >
-                <ClipboardPaste size={15} />
-                <span>+ Вставить ключ или подписку</span>
+                <ClipboardPaste size={15} className="flex-shrink-0" />
+                <span className="truncate">+ Вставить ключ</span>
               </button>
               <button
                 type="button"
                 onClick={onGoToNodes}
-                className="px-3.5 py-2.5 min-h-[44px] rounded-lg bg-surface-container hover:bg-surface-container-high border border-outline-variant text-on-surface font-telemetry-md text-xs flex items-center gap-1.5 cursor-pointer"
+                className="w-full py-2.5 px-3 min-h-[44px] rounded-xl bg-surface-container hover:bg-surface-container-high border border-outline-variant text-on-surface font-telemetry-md text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
               >
-                <Plus size={15} />
-                <span>Мои VPN ({userNodes.length})</span>
+                <Plus size={15} className="flex-shrink-0" />
+                <span className="truncate">🔑 Мои VPN ({userNodes.length})</span>
               </button>
             </div>
           </div>
-
-          {/* Правая часть: Большая круглая кнопка Включения / Отключения */}
-          <button
-            type="button"
-            disabled={busy}
-            onClick={handleToggleVpn}
-            className={`w-36 h-36 md:w-40 md:h-40 rounded-full flex-shrink-0 border-2 flex flex-col items-center justify-center text-center p-3 active:scale-95 transition-all cursor-pointer ${
-              isVerifiedConnected
-                ? 'bg-gradient-to-b from-[#0f2922] to-[#081715] border-primary-container shield-glow'
-                : isVerifying || busy
-                  ? 'bg-gradient-to-b from-[#29200f] to-[#171208] border-[#FFB020]'
-                  : 'bg-gradient-to-b from-[#131D29] to-[#0A1018] border-secondary-container/70 cyan-glow'
-            }`}
-          >
-            <div
-              className={`w-11 h-11 rounded-full flex items-center justify-center mb-1.5 ${
-                isVerifiedConnected
-                  ? 'bg-primary-container/20 text-primary-container'
-                  : isVerifying || busy
-                    ? 'bg-[#FFB020]/20 text-[#FFB020]'
-                    : 'bg-secondary-container/20 text-secondary'
-              }`}
-            >
-              <TacticalIcon
-                name={isVerifiedConnected ? 'shield' : 'power_settings_new'}
-                size={24}
-              />
-            </div>
-            <span className="font-badge-code text-xs font-bold tracking-wider text-on-surface">
-              {isVerifying || busy
-                ? 'ПРОВЕРКА...'
-                : isVerifiedConnected
-                  ? 'ОТКЛЮЧИТЬ'
-                  : 'ВКЛЮЧИТЬ VPN'}
-            </span>
-            <span className="font-telemetry-sm text-[11px] text-on-surface-variant font-mono mt-0.5">
-              {isVerifiedConnected
-                ? formatSessionClock(snapshot.connectedSince, now)
-                : 'АВТОЗАМЕНА'}
-            </span>
-          </button>
         </div>
 
         {/* Раскрываемое поле ручной вставки (если буфер недоступен) */}
@@ -459,64 +476,95 @@ export const ShieldCascadeView: React.FC<Props> = ({
               value={manualPasteInput}
               onChange={(e) => setManualPasteInput(e.target.value)}
               placeholder="Вставьте https:// ссылку подписки или ключ vless://, hy2://, ss://, wg://..."
-              className="flex-1 bg-[#070A0F] border border-outline-variant rounded-lg px-3 py-2.5 min-h-[44px] text-xs text-on-surface font-mono focus:border-primary-container focus:outline-none"
+              className="flex-1 bg-[#070A0F] border border-outline-variant rounded-xl px-3 py-2.5 min-h-[44px] text-xs text-on-surface font-mono focus:border-primary-container focus:outline-none"
             />
             <button
               type="button"
               disabled={busy}
               onClick={() => void handleOneTapPasteImport(manualPasteInput)}
-              className="px-4 py-2.5 min-h-[44px] rounded-lg bg-primary-container text-on-primary font-badge-code text-xs font-bold cursor-pointer"
+              className="px-4 py-2.5 min-h-[44px] rounded-xl bg-primary-container text-on-primary font-badge-code text-xs font-bold cursor-pointer"
             >
               Добавить
             </button>
           </div>
         )}
 
-        {/* 4 ПОНЯТНЫЕ ПЛИТКИ ЖИВОЙ ТЕЛЕМЕТРИИ */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 mt-4 pt-4 border-t border-outline-variant">
-          <div className="p-2.5 rounded-lg bg-surface-container-lowest border border-outline-variant">
-            <span className="font-telemetry-sm text-[11px] text-on-surface-variant block">
-              Активный сервис
-            </span>
-            <span className="font-telemetry-md text-xs text-on-surface font-bold truncate block mt-0.5">
+        {/* 4 ПОНЯТНЫЕ ПЛИТКИ ЖИВОЙ ТЕЛЕМЕТРИИ (STITCH TACTICAL TELEMETRY GRID) */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 mt-4 pt-4 border-t border-outline-variant/60">
+          {/* 1. СЕРВИС / ПРОТОКОЛ */}
+          <div className="p-3 rounded-xl bg-surface-container-lowest/90 border border-outline-variant/60 flex flex-col justify-between gap-1.5">
+            <div className="flex items-center justify-between gap-1">
+              <span className="font-telemetry-sm text-[10px] tracking-wider uppercase text-on-surface-variant truncate">
+                СЕРВИС / ПРОТОКОЛ
+              </span>
+              {isVerifiedConnected && activeNode && (
+                <span className="font-badge-code text-[9px] px-1.5 py-0.5 rounded bg-surface-container-high text-secondary border border-outline-variant/60 flex-shrink-0">
+                  {activeNode.protocol.toUpperCase()}
+                </span>
+              )}
+            </div>
+            <span className="font-telemetry-md text-xs text-on-surface font-bold truncate block">
               {isVerifiedConnected && activeNode
                 ? activeNode.providerName || 'Мои VPN'
                 : 'Не подключён'}
             </span>
           </div>
-          <div className="p-2.5 rounded-lg bg-surface-container-lowest border border-outline-variant">
-            <span className="font-telemetry-sm text-[11px] text-on-surface-variant block">
-              Внешний IP туннеля
-            </span>
-            <span className="font-telemetry-md text-xs text-secondary font-mono font-bold truncate block mt-0.5">
+
+          {/* 2. ВНЕШНИЙ IP */}
+          <div className="p-3 rounded-xl bg-surface-container-lowest/90 border border-outline-variant/60 flex flex-col justify-between gap-1.5">
+            <div className="flex items-center justify-between gap-1">
+              <span className="font-telemetry-sm text-[10px] tracking-wider uppercase text-on-surface-variant truncate">
+                ВНЕШНИЙ IP
+              </span>
+              {isVerifiedConnected && snapshot.telemetry?.exitCountry && (
+                <span className="font-badge-code text-[9px] px-1.5 py-0.5 rounded bg-secondary-container/15 text-secondary-container border border-secondary-container/35 flex-shrink-0">
+                  [{snapshot.telemetry.exitCountry}]
+                </span>
+              )}
+            </div>
+            <span className="font-telemetry-md text-xs text-secondary font-mono font-bold truncate block">
               {isVerifiedConnected
-                ? snapshot.telemetry?.exitIp
-                  ? `${snapshot.telemetry.exitIp}${snapshot.telemetry.exitCountry ? ` (${snapshot.telemetry.exitCountry})` : ''}`
-                  : 'Проверка IP...'
+                ? snapshot.telemetry?.exitIp || 'Проверка...'
                 : 'Без маскировки'}
             </span>
           </div>
-          <div className="p-2.5 rounded-lg bg-surface-container-lowest border border-outline-variant">
-            <span className="font-telemetry-sm text-[11px] text-on-surface-variant block">
-              Пинг • Рейтинг узла
-            </span>
-            <span className="font-telemetry-md text-xs text-primary-container font-mono font-bold block mt-0.5">
+
+          {/* 3. ПИНГ И РЕЙТИНГ */}
+          <div className="p-3 rounded-xl bg-surface-container-lowest/90 border border-outline-variant/60 flex flex-col justify-between gap-1.5">
+            <div className="flex items-center justify-between gap-1">
+              <span className="font-telemetry-sm text-[10px] tracking-wider uppercase text-on-surface-variant truncate">
+                ПИНГ И РЕЙТИНГ
+              </span>
+              {isVerifiedConnected && activeNode?.smartScore && (
+                <span className="font-badge-code text-[9px] px-1.5 py-0.5 rounded bg-[#FFB020]/15 text-[#FFB020] border border-[#FFB020]/40 font-bold flex-shrink-0">
+                  {activeNode.smartScore}★
+                </span>
+              )}
+            </div>
+            <span className="font-telemetry-md text-xs text-primary-container font-mono font-bold truncate block">
               {isVerifiedConnected && activeNode?.latencyMs
-                ? `${activeNode.latencyMs} мс${typeof activeNode.jitterMs === 'number' ? ` (±${activeNode.jitterMs})` : ''}${activeNode.smartScore ? ` • ${activeNode.smartScore}★` : ''}`
+                ? `${activeNode.latencyMs} мс${
+                    typeof activeNode.jitterMs === 'number' ? ` • ±${activeNode.jitterMs} мс` : ''
+                  }`
                 : '—'}
             </span>
           </div>
-          <div className="p-2.5 rounded-lg bg-surface-container-lowest border border-outline-variant">
-            <span className="font-telemetry-sm text-[11px] text-on-surface-variant block">
-              Скорость трафика
-            </span>
-            <span className="font-telemetry-md text-xs text-on-surface font-mono truncate block mt-0.5">
+
+          {/* 4. СКОРОСТЬ ПОТОКА */}
+          <div className="p-3 rounded-xl bg-surface-container-lowest/90 border border-outline-variant/60 flex flex-col justify-between gap-1.5">
+            <div className="flex items-center justify-between gap-1">
+              <span className="font-telemetry-sm text-[10px] tracking-wider uppercase text-on-surface-variant truncate">
+                СКОРОСТЬ ПОТОКА
+              </span>
+              {isVerifiedConnected && snapshot.telemetry?.measuredBandwidthKbps ? (
+                <span className="font-badge-code text-[9px] px-1.5 py-0.5 rounded bg-primary-container/15 text-primary-container border border-primary-container/35 flex-shrink-0">
+                  {(snapshot.telemetry.measuredBandwidthKbps / 1000).toFixed(1)}M
+                </span>
+              ) : null}
+            </div>
+            <span className="font-telemetry-md text-xs text-on-surface font-mono font-bold truncate block">
               {isVerifiedConnected
-                ? `↓ ${formatSpeedHuman(snapshot.telemetry?.rxSpeedBps)} • ↑ ${formatSpeedHuman(snapshot.telemetry?.txSpeedBps)}${
-                    snapshot.telemetry?.measuredBandwidthKbps
-                      ? ` (пик ${(snapshot.telemetry.measuredBandwidthKbps / 1000).toFixed(1)} Мбит/с)`
-                      : ''
-                  }`
+                ? `↓ ${formatSpeedHuman(snapshot.telemetry?.rxSpeedBps)} • ↑ ${formatSpeedHuman(snapshot.telemetry?.txSpeedBps)}`
                 : '0 КБ/с'}
             </span>
           </div>

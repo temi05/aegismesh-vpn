@@ -131,10 +131,10 @@ export const RoutingSecurityView: React.FC<Props> = ({ snapshot, onUpdate, onNot
   };
 
   return (
-    <div>
+    <div className="max-w-5xl mx-auto space-y-4">
       {/* Центр обновлений AegisMesh VPN (GitHub Releases + OTA .APK в 1 клик) */}
       <div
-        className="card"
+        className="card rounded-xl relative overflow-hidden"
         style={{
           marginBottom: 14,
           border: hasUpdate
@@ -142,7 +142,8 @@ export const RoutingSecurityView: React.FC<Props> = ({ snapshot, onUpdate, onNot
             : '1px solid rgba(0, 229, 176, 0.28)',
         }}
       >
-        <div className="card-header" style={{ flexWrap: 'wrap', gap: 8 }}>
+        <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-[#38BDF8] via-primary-container to-[#38BDF8] opacity-85" />
+        <div className="card-header flex-col sm:flex-row sm:items-center gap-2.5">
           <div className="card-title">
             <RefreshCw
               size={18}
@@ -151,11 +152,11 @@ export const RoutingSecurityView: React.FC<Props> = ({ snapshot, onUpdate, onNot
             />
             <span>🔄 Центр обновлений AegisMesh VPN (GitHub Releases)</span>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+          <div className="grid grid-cols-1 sm:flex items-center gap-2 w-full sm:w-auto">
             <span
-              className="badge mono"
+              className="badge mono text-center justify-center"
               style={{
-                padding: '4px 10px',
+                padding: '5px 10px',
                 fontWeight: 700,
                 background: hasUpdate
                   ? 'rgba(56, 189, 248, 0.16)'
@@ -172,7 +173,7 @@ export const RoutingSecurityView: React.FC<Props> = ({ snapshot, onUpdate, onNot
             </span>
             <button
               type="button"
-              className="btn btn-sm"
+              className="btn btn-sm w-full sm:w-auto justify-center"
               disabled={checkingUpdate}
               onClick={() => void handleCheckAppUpdate()}
             >
@@ -184,12 +185,12 @@ export const RoutingSecurityView: React.FC<Props> = ({ snapshot, onUpdate, onNot
         </div>
 
         <div
+          className="rounded-xl"
           style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
             gap: 10,
             padding: 12,
-            borderRadius: 10,
             background: 'var(--bg-elevated)',
             marginBottom: 12,
           }}
@@ -232,9 +233,9 @@ export const RoutingSecurityView: React.FC<Props> = ({ snapshot, onUpdate, onNot
 
         {appUpdate?.releaseNotes && (
           <div
+            className="rounded-xl"
             style={{
               padding: 12,
-              borderRadius: 10,
               background: '#080d16',
               border: '1px solid var(--border-subtle)',
               marginBottom: 12,
@@ -265,9 +266,9 @@ export const RoutingSecurityView: React.FC<Props> = ({ snapshot, onUpdate, onNot
 
         {appUpdate?.statusMessage && (
           <div
+            className="rounded-xl"
             style={{
               padding: '8px 12px',
-              borderRadius: 8,
               background: 'rgba(0, 229, 176, 0.1)',
               border: '1px solid rgba(0, 229, 176, 0.35)',
               color: 'var(--emerald-shield)',
@@ -281,9 +282,9 @@ export const RoutingSecurityView: React.FC<Props> = ({ snapshot, onUpdate, onNot
 
         {appUpdate?.error && (
           <div
+            className="rounded-xl"
             style={{
               padding: '8px 12px',
-              borderRadius: 8,
               background: 'rgba(255, 176, 32, 0.1)',
               border: '1px solid rgba(255, 176, 32, 0.35)',
               color: 'var(--amber-failover)',
@@ -295,10 +296,10 @@ export const RoutingSecurityView: React.FC<Props> = ({ snapshot, onUpdate, onNot
           </div>
         )}
 
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
+        <div className="grid grid-cols-1 sm:flex sm:flex-wrap gap-2 items-center w-full">
           <button
             type="button"
-            className="btn btn-primary btn-sm"
+            className="btn btn-primary btn-sm w-full sm:w-auto justify-center"
             disabled={installingUpdate}
             onClick={() => void handleInstallAppUpdate()}
           >
@@ -311,7 +312,7 @@ export const RoutingSecurityView: React.FC<Props> = ({ snapshot, onUpdate, onNot
           {!isMobile && (
             <button
               type="button"
-              className="btn btn-sm"
+              className="btn btn-sm w-full sm:w-auto justify-center"
               disabled={installingUpdate}
               onClick={() =>
                 void handleInstallAppUpdate(
@@ -327,7 +328,8 @@ export const RoutingSecurityView: React.FC<Props> = ({ snapshot, onUpdate, onNot
 
       <div className="grid-2">
         {/* Настройки Auto-Failover и Kill Switch */}
-        <div className="card">
+        <div className="card rounded-xl relative overflow-hidden">
+          <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-primary-container via-secondary-container to-primary-container opacity-75" />
           <div className="card-header">
             <div className="card-title">
               <ShieldAlert size={18} color="var(--emerald-shield)" />
@@ -397,13 +399,13 @@ export const RoutingSecurityView: React.FC<Props> = ({ snapshot, onUpdate, onNot
             </div>
 
             <div
+              className="rounded-xl"
               style={{
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center',
                 padding: 12,
                 background: 'var(--bg-elevated)',
-                borderRadius: 10,
               }}
             >
               <div>
@@ -430,13 +432,13 @@ export const RoutingSecurityView: React.FC<Props> = ({ snapshot, onUpdate, onNot
 
             {/* Настройки Умной Автозамены v3.0: Контроль скорости, DPI-антизависание и Автообновление подписок */}
             <div
+              className="rounded-xl"
               style={{
                 display: 'flex',
                 flexDirection: 'column',
                 gap: 10,
                 padding: 12,
                 background: 'var(--bg-elevated)',
-                borderRadius: 10,
                 border: '1px solid rgba(0, 229, 176, 0.22)',
               }}
             >
@@ -547,7 +549,8 @@ export const RoutingSecurityView: React.FC<Props> = ({ snapshot, onUpdate, onNot
         </div>
 
         {/* Режим подключения и Защищённый DNS (DoH) */}
-        <div className="card">
+        <div className="card rounded-xl relative overflow-hidden">
+          <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-secondary-container via-primary-container to-secondary-container opacity-75" />
           <div className="card-header">
             <div className="card-title">
               <Globe size={18} color="var(--cyan-mobile)" />
@@ -718,7 +721,8 @@ export const RoutingSecurityView: React.FC<Props> = ({ snapshot, onUpdate, onNot
 
       <div className="grid-2">
         {/* Раздельное туннелирование (Split Tunneling) */}
-        <div className="card">
+        <div className="card rounded-xl relative overflow-hidden">
+          <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-[#FFB020] via-primary-container to-[#FFB020] opacity-75" />
           <div className="card-header">
             <div className="card-title">
               <Route size={18} color="var(--amber-failover)" />
@@ -740,14 +744,18 @@ export const RoutingSecurityView: React.FC<Props> = ({ snapshot, onUpdate, onNot
             Госуслуги, локальные сервисы):
           </p>
 
-          <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+          <div className="flex flex-col sm:flex-row gap-2 mb-3">
             <input
-              className="input mono"
+              className="input mono flex-1"
               placeholder="Например: *.ru или sberbank.ru"
               value={newDomain}
               onChange={(e) => setNewDomain(e.target.value)}
             />
-            <button type="button" className="btn btn-primary" onClick={handleAddBypassDomain}>
+            <button
+              type="button"
+              className="btn btn-primary w-full sm:w-auto justify-center"
+              onClick={handleAddBypassDomain}
+            >
               <Plus size={16} /> Добавить
             </button>
           </div>
@@ -775,7 +783,8 @@ export const RoutingSecurityView: React.FC<Props> = ({ snapshot, onUpdate, onNot
         </div>
 
         {/* Ядро sing-box и Криптосейф AES-256-GCM */}
-        <div className="card">
+        <div className="card rounded-xl relative overflow-hidden">
+          <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-primary-container via-secondary-container to-primary-container opacity-75" />
           <div className="card-header">
             <div className="card-title">
               <Cpu size={18} color="var(--emerald-shield)" />
@@ -784,10 +793,10 @@ export const RoutingSecurityView: React.FC<Props> = ({ snapshot, onUpdate, onNot
           </div>
 
           <div
+            className="rounded-xl"
             style={{
               padding: 12,
               background: 'var(--bg-elevated)',
-              borderRadius: 10,
               marginBottom: 12,
             }}
           >
@@ -806,7 +815,7 @@ export const RoutingSecurityView: React.FC<Props> = ({ snapshot, onUpdate, onNot
             {!snapshot.coreStatus.installed && (
               <button
                 type="button"
-                className="btn btn-sm"
+                className="btn btn-sm w-full sm:w-auto justify-center"
                 style={{ marginTop: 8 }}
                 disabled={installingCore || snapshot.coreStatus.downloading}
                 onClick={async () => {
@@ -831,18 +840,20 @@ export const RoutingSecurityView: React.FC<Props> = ({ snapshot, onUpdate, onNot
             )}
           </div>
 
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            <Lock size={16} color="var(--amber-failover)" />
-            <input
-              type="password"
-              className="input"
-              placeholder="Новый PIN-код для шифрования ключей (AES-256)"
-              value={pinInput}
-              onChange={(e) => setPinInput(e.target.value)}
-            />
+          <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
+            <div className="flex items-center gap-2 flex-1">
+              <Lock size={16} color="var(--amber-failover)" className="flex-shrink-0" />
+              <input
+                type="password"
+                className="input flex-1"
+                placeholder="Новый PIN-код для шифрования ключей (AES-256)"
+                value={pinInput}
+                onChange={(e) => setPinInput(e.target.value)}
+              />
+            </div>
             <button
               type="button"
-              className="btn btn-sm"
+              className="btn btn-sm w-full sm:w-auto justify-center"
               onClick={async () => {
                 const next = await aegisApi.setVaultPin(pinInput.trim() || null);
                 onUpdate(next);
@@ -875,15 +886,16 @@ export const RoutingSecurityView: React.FC<Props> = ({ snapshot, onUpdate, onNot
 
       {/* Уровень 3: Аварийное закрытое VPN-приложение Android (если недоступны все подписки и прокси-мосты) */}
       {isMobile && (
-        <div className="card" style={{ marginTop: 14 }}>
-          <div className="card-header">
+        <div className="card rounded-xl relative overflow-hidden" style={{ marginTop: 14 }}>
+          <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-[#FFB020] via-secondary-container to-[#FFB020] opacity-75" />
+          <div className="card-header flex-col sm:flex-row sm:items-center gap-2">
             <div className="card-title">
               <Smartphone size={18} color="var(--amber-failover)" />
               <span>Резервное VPN-приложение на телефоне (Аварийный перехват)</span>
             </div>
             <button
               type="button"
-              className="btn btn-sm"
+              className="btn btn-sm w-full sm:w-auto justify-center"
               onClick={async () => {
                 const next = await aegisApi.scanExternalClients();
                 onUpdate(next);
@@ -898,10 +910,9 @@ export const RoutingSecurityView: React.FC<Props> = ({ snapshot, onUpdate, onNot
             и без локального прокси), выберите его здесь. Если все ваши подписки упадут, AegisMesh
             отключит свой туннель и предложит запустить это приложение в 1 касание:
           </p>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
+          <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
             <select
-              className="select"
-              style={{ flex: 1, minWidth: 220 }}
+              className="select flex-1"
               value={snapshot.emergencyAppPackage || ''}
               onChange={async (e) => {
                 const val = e.target.value || null;
@@ -924,7 +935,7 @@ export const RoutingSecurityView: React.FC<Props> = ({ snapshot, onUpdate, onNot
             {snapshot.emergencyAppPackage && (
               <button
                 type="button"
-                className="btn btn-sm"
+                className="btn btn-sm w-full sm:w-auto justify-center"
                 onClick={async () => {
                   try {
                     const next = await aegisApi.launchEmergencyApp(
@@ -947,9 +958,10 @@ export const RoutingSecurityView: React.FC<Props> = ({ snapshot, onUpdate, onNot
       )}
 
       {/* Сворачиваемый блок Экспорта профиля sing-box и QR-моста ПК ↔ Смартфон */}
-      <div className="card" style={{ marginTop: 14 }}>
+      <div className="card rounded-xl relative overflow-hidden" style={{ marginTop: 14 }}>
+        <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-secondary-container via-primary-container to-secondary-container opacity-75" />
         <div
-          className="card-header"
+          className="card-header flex-col sm:flex-row sm:items-center gap-2"
           style={{ cursor: 'pointer', marginBottom: showQrExport ? 12 : 0 }}
           onClick={() => setShowQrExport((v) => !v)}
         >
@@ -957,7 +969,7 @@ export const RoutingSecurityView: React.FC<Props> = ({ snapshot, onUpdate, onNot
             <QrCode size={18} color="var(--cyan-mobile)" />
             <span>Экспорт конфигурации sing-box и QR-синхронизация с ПК</span>
           </div>
-          <button type="button" className="btn btn-sm">
+          <button type="button" className="btn btn-sm w-full sm:w-auto justify-center">
             {showQrExport ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
             <span>{showQrExport ? 'Свернуть' : 'Открыть'}</span>
           </button>

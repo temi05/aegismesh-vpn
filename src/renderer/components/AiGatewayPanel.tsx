@@ -164,7 +164,8 @@ export const AiGatewayPanel: React.FC<Props> = ({
       (activeAiNode ? inferCountryHintFromNode(activeAiNode) : null);
 
     return (
-      <div className="rounded-xl bg-surface border border-[#38BDF8]/40 p-3.5 md:p-4 space-y-2.5">
+      <div className="rounded-xl bg-surface border border-[#38BDF8]/40 p-3.5 md:p-4 space-y-2.5 relative overflow-hidden">
+        <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-[#38BDF8] via-primary-container to-[#38BDF8] opacity-75" />
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0">
             <div className="w-8 h-8 rounded-lg bg-[#38BDF8]/15 border border-[#38BDF8]/40 flex items-center justify-center flex-shrink-0">
@@ -252,12 +253,12 @@ export const AiGatewayPanel: React.FC<Props> = ({
                 )}
             </div>
 
-            <div className="flex items-center gap-2 flex-shrink-0">
+            <div className="grid grid-cols-2 sm:flex items-center gap-2 w-full sm:w-auto flex-shrink-0">
               <button
                 type="button"
                 disabled={aiProbing || userNodes.length === 0}
                 onClick={() => void handleScanAi()}
-                className="flex-1 sm:flex-initial px-3 py-2 min-h-[38px] rounded-lg bg-surface-container-high hover:bg-surface-variant border border-outline-variant text-on-surface font-badge-code text-[11px] flex items-center justify-center gap-1.5 cursor-pointer"
+                className="w-full sm:w-auto px-3 py-2 min-h-[38px] rounded-lg bg-surface-container-high hover:bg-surface-variant border border-outline-variant text-on-surface font-badge-code text-[11px] flex items-center justify-center gap-1.5 cursor-pointer"
               >
                 <SearchCheck size={13} className={aiProbing ? 'animate-pulse text-[#38BDF8]' : 'text-[#38BDF8]'} />
                 <span>{aiProbing ? 'Проверка...' : 'Проверить ИИ'}</span>
@@ -267,7 +268,7 @@ export const AiGatewayPanel: React.FC<Props> = ({
                 type="button"
                 disabled={busyAi || userNodes.length < 2}
                 onClick={() => void handleCycleAiNode()}
-                className="flex-1 sm:flex-initial px-3 py-2 min-h-[38px] rounded-lg bg-[#38BDF8]/15 hover:bg-[#38BDF8]/25 border border-[#38BDF8]/50 text-[#38BDF8] font-badge-code text-[11px] font-bold flex items-center justify-center gap-1.5 cursor-pointer"
+                className="w-full sm:w-auto px-3 py-2 min-h-[38px] rounded-lg bg-[#38BDF8]/15 hover:bg-[#38BDF8]/25 border border-[#38BDF8]/50 text-[#38BDF8] font-badge-code text-[11px] font-bold flex items-center justify-center gap-1.5 cursor-pointer"
               >
                 <RefreshCw size={13} className={busyAi ? 'animate-spin' : ''} />
                 <span>Сменить ИИ</span>
@@ -281,25 +282,29 @@ export const AiGatewayPanel: React.FC<Props> = ({
 
   // Детальная панель для вкладки «Настройки»
   return (
-    <div className="card" style={{ marginTop: 14, border: '1px solid rgba(56, 189, 248, 0.35)' }}>
-      <div className="card-header">
+    <div
+      className="card rounded-xl relative overflow-hidden"
+      style={{ marginTop: 14, border: '1px solid rgba(56, 189, 248, 0.35)' }}
+    >
+      <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-[#38BDF8] via-primary-container to-[#38BDF8] opacity-75" />
+      <div className="card-header flex-wrap gap-2">
         <div className="card-title">
           <Bot size={18} color="#38BDF8" />
           <span>Умный шлюз для Нейросетей (Google Gemini • ChatGPT • Grok)</span>
         </div>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+        <div className="grid grid-cols-2 sm:flex gap-2 w-full sm:w-auto items-center">
           <button
             type="button"
-            className="btn btn-sm"
+            className="btn btn-sm w-full sm:w-auto justify-center"
             disabled={aiProbing || userNodes.length === 0}
             onClick={() => void handleScanAi()}
           >
             <SearchCheck size={14} />{' '}
-            {aiProbing ? 'Проверяем Gemini/GPT/Grok...' : 'Проверить серверы на ИИ'}
+            {aiProbing ? 'Проверяем...' : 'Проверить серверы'}
           </button>
           <button
             type="button"
-            className={`btn btn-sm ${aiEnabled ? 'btn-primary' : ''}`}
+            className={`btn btn-sm w-full sm:w-auto justify-center ${aiEnabled ? 'btn-primary' : ''}`}
             onClick={() =>
               void patchSettings(
                 { aiRoutingEnabled: !aiEnabled },
@@ -519,16 +524,20 @@ export const AiGatewayPanel: React.FC<Props> = ({
         <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 6 }}>
           Дополнительные сайты или API нейросетей (по желанию):
         </div>
-        <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+        <div className="flex flex-col sm:flex-row gap-2 mb-2">
           <input
             type="text"
-            className="input mono"
+            className="input mono flex-1"
             placeholder="Например: huggingface.co, midjourney.com, openrouter.ai"
             value={customAiDomain}
             onChange={(e) => setCustomAiDomain(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && void handleAddCustomDomain()}
           />
-          <button type="button" className="btn btn-primary" onClick={() => void handleAddCustomDomain()}>
+          <button
+            type="button"
+            className="btn btn-primary w-full sm:w-auto justify-center"
+            onClick={() => void handleAddCustomDomain()}
+          >
             <Plus size={15} /> Добавить
           </button>
         </div>
