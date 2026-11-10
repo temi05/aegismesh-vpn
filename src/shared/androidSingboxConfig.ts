@@ -71,8 +71,12 @@ function buildTls(node: VpnNode): Record<string, unknown> | undefined {
   };
   if (node.alpn && node.alpn.length > 0) {
     tlsObj.alpn = node.alpn;
+  } else if (node.transport === 'ws' && node.tls === 'tls') {
+    tlsObj.alpn = ['http/1.1'];
+  } else if (node.protocol === 'tuic') {
+    tlsObj.alpn = ['h3'];
   }
-  if (node.fingerprint || node.tls === 'reality') {
+  if (node.protocol !== 'hysteria2' && node.protocol !== 'tuic') {
     tlsObj.utls = {
       enabled: true,
       fingerprint: node.fingerprint || 'chrome',
@@ -132,6 +136,7 @@ export function nodeToSingboxUnit(
           server: node.server,
           server_port: node.port,
           uuid: node.uuid || '',
+          packet_encoding: 'xudp',
           ...(node.flow ? { flow: node.flow } : {}),
           ...(tls ? { tls } : {}),
           ...(transport ? { transport } : {}),
@@ -148,6 +153,7 @@ export function nodeToSingboxUnit(
           uuid: node.uuid || '',
           security: node.method || 'auto',
           alter_id: node.alterId || 0,
+          packet_encoding: 'xudp',
           ...(tls ? { tls } : {}),
           ...(transport ? { transport } : {}),
         },
@@ -177,7 +183,15 @@ export function nodeToSingboxUnit(
           ...(transport ? { transport } : {}),
         },
       };
-    case 'hysteria2':
+    case 'hysteria2': {
+      const rawMport = (node.mport || '').trim();
+      const serverPorts = rawMport
+        ? rawMport
+            .split(',')
+            .map((part) => part.trim().replace(/-/g, ':'))
+            .filter(Boolean)
+            .map((part) => (part.includes(':') ? part : `${part}:${part}`))
+        : undefined;
       return {
         kind: 'outbound',
         config: {
@@ -186,6 +200,9 @@ export function nodeToSingboxUnit(
           server: node.server,
           server_port: node.port,
           password: node.password || '',
+          ...(serverPorts && serverPorts.length > 0
+            ? { server_ports: serverPorts, hop_interval: '30s' }
+            : {}),
           ...(node.upMbps ? { up_mbps: node.upMbps } : {}),
           ...(node.downMbps ? { down_mbps: node.downMbps } : {}),
           ...(node.obfsType === 'salamander' && node.obfsPassword
@@ -198,6 +215,7 @@ export function nodeToSingboxUnit(
           },
         },
       };
+    }
     case 'tuic':
       return {
         kind: 'outbound',

@@ -4,6 +4,7 @@
 import { Capacitor } from '@capacitor/core';
 import type {
   AppSettings,
+  AppUpdateInfo,
   CyberAuditReport,
   MobileAccessInfo,
   ParseImportResult,
@@ -259,4 +260,18 @@ export const aegisApi = {
 
   installSingboxCore: (): Promise<VpnStateSnapshot> =>
     requestJson<VpnStateSnapshot>('/api/core/install', 'POST'),
+
+  checkAppUpdate: (
+    mockReleasePayload?: unknown
+  ): Promise<{ ok: boolean; update: AppUpdateInfo; snapshot: VpnStateSnapshot }> =>
+    requestJson(
+      '/api/update/check',
+      'POST',
+      mockReleasePayload ? { mockReleasePayload } : {}
+    ),
+
+  installAppUpdate: (
+    url?: string
+  ): Promise<{ ok: boolean; update: AppUpdateInfo; snapshot: VpnStateSnapshot }> =>
+    requestJson('/api/update/install', 'POST', { url }),
 };

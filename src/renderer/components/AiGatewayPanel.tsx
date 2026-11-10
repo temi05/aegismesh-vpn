@@ -223,11 +223,14 @@ export const AiGatewayPanel: React.FC<Props> = ({
               )}
               {activeAiNode?.aiStatus === 'ok' && (
                 <span className="ml-1.5 inline-flex items-center gap-1 text-[10px] font-badge-code px-1.5 py-0.5 rounded bg-primary-container/15 text-primary-container border border-primary-container/40">
-                  {activeAiNode.aiGeminiOk
+                  {activeAiNode.aiGeminiOk !== false
                     ? `Gemini✓${activeAiNode.aiExitCountry ? ` (Google: ${activeAiNode.aiExitCountry})` : ''}`
                     : ''}
-                  {activeAiNode.aiChatgptOk ? ' GPT✓' : ''}
-                  {activeAiNode.aiGrokOk ? ' Grok✓' : ''}
+                  {activeAiNode.aiChatgptOk !== false ? ' GPT✓' : ''}
+                  {activeAiNode.aiGrokOk !== false ? ' Grok✓' : ''}
+                  {typeof activeAiNode.latencyMs === 'number' && activeAiNode.latencyMs > 0
+                    ? ` • ${activeAiNode.latencyMs}мс`
+                    : ''}
                 </span>
               )}
               {activeAiNode?.aiStatus === 'blocked' && (
@@ -367,12 +370,29 @@ export const AiGatewayPanel: React.FC<Props> = ({
             </option>
             {userNodes.map((n) => {
               const cc = inferCountryHintFromNode(n);
+              const serviceIndicators = [
+                n.aiGeminiOk || (n.aiStatus === 'ok' && n.aiGeminiOk !== false)
+                  ? 'Gemini✓'
+                  : '',
+                n.aiChatgptOk || (n.aiStatus === 'ok' && n.aiChatgptOk !== false)
+                  ? 'GPT✓'
+                  : '',
+                n.aiGrokOk || (n.aiStatus === 'ok' && n.aiGrokOk !== false)
+                  ? 'Grok✓'
+                  : '',
+              ]
+                .filter(Boolean)
+                .join(' ');
+              const latText =
+                typeof n.latencyMs === 'number' && n.latencyMs > 0
+                  ? ` • ${n.latencyMs}мс`
+                  : '';
               const badge =
                 n.aiStatus === 'ok'
-                  ? `🤖 AI OK${n.aiExitCountry ? ` [Google: ${n.aiExitCountry}]` : ''}`
+                  ? `🤖 AI OK${n.aiExitCountry ? ` [Google: ${n.aiExitCountry}]` : ''}${serviceIndicators ? ` (${serviceIndicators})` : ''}${latText}`
                   : n.aiStatus === 'blocked'
-                    ? `❌ ${n.aiBlockReason || 'Блок ИИ'}`
-                    : '⏳ Не проверен';
+                    ? `❌ ${n.aiBlockReason || 'Блок ИИ'}${serviceIndicators ? ` (${serviceIndicators})` : ''}${latText}`
+                    : `⏳ Не проверен${serviceIndicators ? ` (${serviceIndicators})` : ''}${latText}`;
               return (
                 <option key={n.id} value={n.id}>
                   {n.name} {cc ? `(${cc})` : ''} — {badge}

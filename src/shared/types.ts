@@ -64,6 +64,7 @@ export interface VpnNode {
   realityShortId?: string;
 
   // Hysteria2 / TUIC параметры
+  mport?: string;
   obfsType?: string;
   obfsPassword?: string;
   upMbps?: number;
@@ -85,6 +86,7 @@ export interface VpnNode {
   lastCheckedAt: number | null;
   consecutiveFailures: number;
   quarantinedUntil: number | null;
+  unavailableReason?: string | null;
   lastError?: string;
   // Метрики Умной Автозамены v3 (EMA-пинг, джиттер, стабильность, скорость, Smart Score 0-100)
   emaLatencyMs?: number | null;
@@ -330,6 +332,25 @@ export interface CoreBinaryStatus {
   error?: string;
 }
 
+export interface AppUpdateInfo {
+  currentVersion: string;
+  latestVersion: string;
+  updateAvailable: boolean;
+  releaseTag: string;
+  releaseTitle: string;
+  releaseNotes: string;
+  publishedAt: string | null;
+  htmlUrl: string;
+  apkDownloadUrl: string | null;
+  apkSizeBytes: number | null;
+  desktopDownloadUrl: string | null;
+  checkedAt: number;
+  downloading?: boolean;
+  downloadProgress?: number;
+  statusMessage?: string | null;
+  error?: string | null;
+}
+
 export interface VpnStateSnapshot {
   connectionState: EngineConnectionState;
   activeNodeId: string | null;
@@ -353,6 +374,7 @@ export interface VpnStateSnapshot {
   installedUserApps?: InstalledUserApp[];
   emergencyAppPackage?: string | null;
   telemetry?: LiveTunnelTelemetry;
+  appUpdate?: AppUpdateInfo | null;
 }
 
 export interface ParseImportResult {

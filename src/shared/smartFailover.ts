@@ -15,37 +15,54 @@ import type {
  * Для Hysteria2 [HY2], TUIC и WireGuard обычная проверка TCP-сокетом (Socket.connect) всегда даёт ложный таймаут,
  * поэтому такие узлы нельзя браковать TCP-пингом — они проверяются сквозным запросом через Clash API ядра sing-box!
  */
-export function isUdpBasedVpnProtocol(protocol: VpnProtocol): boolean {
+export function isUdpBasedVpnProtocol(
+  protocolOrNode: VpnProtocol | Pick<VpnNode, 'protocol'> | string | null | undefined
+): boolean {
+  if (!protocolOrNode) return false;
+  const protocol =
+    typeof protocolOrNode === 'string' ? protocolOrNode : protocolOrNode.protocol;
   return protocol === 'hysteria2' || protocol === 'tuic' || protocol === 'wireguard';
 }
 
 /**
- * Распознаёт серверы, специально адаптированные для работы на мобильном интернете (4G / LTE / 5G)
- * и обхода фильтрации ТСПУ сотовых операторов:
- * - серверы с пометками `LTE`, `4G`, `5G`, `Мобильный`, `через РФ`, `Обход`, `White / Вайт`, `МТС / МегаФон / Билайн / Т2 / Yota`;
- * - транзитные релеи с входным узлом `ru.*`;
- * - узлы с маскировкой `VLESS Reality` (`tls === 'reality'`).
+ * Распознаёт выделенные мобильные релеи и обходные серверы (`LTE`, `4G`, `5G`, `через РФ`, `via RU`,
+ * `Relay`, `Мост`, `Обход`, `Вайт / White`, `МТС / МегаФон / Билайн / Т2 / Yota`, входной домен `ru.*`)
+ * БЕЗ автоматического включения любого зарубежного `VLESS Reality` узла.
  */
-export function isMobileCarrierFriendlyNode(
-  node: Pick<VpnNode, 'name' | 'server' | 'tls' | 'protocol'>
+export function isDedicatedMobileRelayNode(
+  node: Pick<VpnNode, 'name' | 'server'> & Partial<Pick<VpnNode, 'tls' | 'protocol'>>
 ): boolean {
-  const text = `${node.name || ''} ${node.server || ''}`.toLowerCase();
+  const name = (node.name || '').toLowerCase();
+  const server = (node.server || '').toLowerCase();
+  const text = `${name} ${server}`;
   if (
-    /(\blte\b|\b4g\b|\b5g\b|мобил|mobile|через\s*рф|via\s*ru|обход|вайт|white|relay|bridge|мост|мтс|\bmts\b|мегафон|megafon|билайн|beeline|tele2|\bt2\b|yota|^ru\.|\.ru\.)/i.test(
+    /(\blte\b|\b4g\b|\b5g\b|мобил|mobile|через\s*(?:🇷🇺\s*)?(?:рф|росси|ru)|via\s*(?:ru|russia)|обход|вайт|white|relay|bridge|мост|мтс|\bmts\b|мегафон|megafon|билайн|beeline|tele2|\bt2\b|yota)/i.test(
       text
     )
   ) {
     return true;
   }
-  if (node.tls === 'reality') {
+  if (/(^ru\.|\.ru\.)/i.test(server)) {
     return true;
   }
   return false;
 }
 
 /**
+ * Распознаёт серверы, адаптированные для работы на мобильном интернете (4G / LTE / 5G)
+ * и обхода фильтрации ТСПУ сотовых операторов:
+ * - выделенные мобильные релеи (`isDedicatedMobileRelayNode`);
+ * - узлы с маскировкой `VLESS Reality` (`tls === 'reality'`).
+ */
+export function isMobileCarrierFriendlyNode(
+  node: Pick<VpnNode, 'name' | 'server' | 'tls' | 'protocol'>
+): boolean {
+  return isDedicatedMobileRelayNode(node) || node.tls === 'reality';
+}
+
+/**
  * Переводит временно не ответивший сервер в краткосрочный карантин с гарантированным таймером автовозврата
- * (вместо вечного статуса `down`, из которого сервер никогда не выходил самостоятельно).
+ * и экспоненциальным откатом (45с -> 68с -> 90с -> 113с, макс. 120с).
  */
 export function markNodeTemporarilyUnavailable(
   node: VpnNode,
@@ -54,7 +71,6 @@ export function markNodeTemporarilyUnavailable(
   now = Date.now(),
   networkType?: PhysicalNetworkProfile
 ): void {
-  if (node.status === 'active') return;
   const failures = Math.max(1, (node.consecutiveFailures || 0) + 1);
   node.consecutiveFailures = failures;
   const cleanBase = Math.max(15, baseDurationSec || 45);
@@ -67,9 +83,29 @@ export function markNodeTemporarilyUnavailable(
   node.lastCheckedAt = now;
   node.quarantinedUntil = now + backoffSec * 1000;
   node.quarantinedOnNetwork = networkType || node.quarantinedOnNetwork || null;
+  node.unavailableReason = reason ?? null;
   if (reason !== undefined) {
     node.lastError = reason;
   }
+}
+
+/**
+ * Принудительно снимает карантин со всех серверов и полностью сбрасывает счётчик ошибок.
+ */
+export function releaseAllUnavailableNodes(nodes: VpnNode[]): number {
+  let released = 0;
+  for (const node of nodes) {
+    if (node.status === 'quarantined' || node.status === 'down') {
+      node.status = 'standby';
+      node.quarantinedUntil = null;
+      node.quarantinedOnNetwork = null;
+      node.unavailableReason = null;
+      node.consecutiveFailures = 0;
+      node.lastError = undefined;
+      released += 1;
+    }
+  }
+  return released;
 }
 
 /**
@@ -90,6 +126,7 @@ export function releaseQuarantineForNetworkShift(
       node.status = 'standby';
       node.quarantinedUntil = null;
       node.quarantinedOnNetwork = null;
+      node.unavailableReason = null;
       node.consecutiveFailures = 0;
       node.lastError = undefined;
       released += 1;
@@ -102,6 +139,7 @@ export function releaseQuarantineForNetworkShift(
  * Автоматически возвращает серверы из списка недоступных по истечении таймера карантина,
  * снимает ложные TCP-ошибки с UDP/QUIC серверов ([HY2]/TUIC/WG) и защищает список от полного опустошения
  * при кратковременной потере связи (лифт / смена Wi-Fi ↔ LTE).
+ * При выходе по таймеру сохраняет `consecutiveFailures`, чтобы при повторном падении карантин увеличивался экспоненциально.
  */
 export function releaseExpiredUnavailableNodes(
   nodes: VpnNode[],
@@ -123,17 +161,20 @@ export function releaseExpiredUnavailableNodes(
     ) {
       node.status = 'standby';
       node.quarantinedUntil = null;
+      node.quarantinedOnNetwork = null;
+      node.unavailableReason = null;
       node.consecutiveFailures = 0;
       node.lastError = undefined;
       released += 1;
       continue;
     }
 
-    // 2. Выход по истечении таймера карантина
+    // 2. Выход по истечении таймера карантина (сохраняем consecutiveFailures для экспоненциального бэкоффа при повторном падении)
     if (node.quarantinedUntil !== null && node.quarantinedUntil <= now) {
       node.status = 'standby';
       node.quarantinedUntil = null;
-      node.consecutiveFailures = 0;
+      node.quarantinedOnNetwork = null;
+      node.unavailableReason = null;
       node.lastError = undefined;
       released += 1;
       continue;
@@ -144,7 +185,8 @@ export function releaseExpiredUnavailableNodes(
       const checkedAt = node.lastCheckedAt || 0;
       if (!checkedAt || now - checkedAt >= 45_000) {
         node.status = 'standby';
-        node.consecutiveFailures = 0;
+        node.quarantinedOnNetwork = null;
+        node.unavailableReason = null;
         node.lastError = undefined;
         released += 1;
       } else {
@@ -167,6 +209,8 @@ export function releaseExpiredUnavailableNodes(
         for (const n of enabledUserNodes) {
           n.status = 'standby';
           n.quarantinedUntil = null;
+          n.quarantinedOnNetwork = null;
+          n.unavailableReason = null;
           n.consecutiveFailures = 0;
           n.lastError = undefined;
           released += 1;
@@ -208,6 +252,7 @@ export interface ZombieStallSample {
 /**
  * Обновляет умные метрики узла (EMA-задержка, джиттер, процент успеха, скорость и итоговый Smart Score 0–100 ★)
  * с раздельной памятью для домашнего Wi-Fi (`wifiScore`) и мобильной сети LTE/4G (`cellularScore`).
+ * Изолирует EMA и джиттер между Wi-Fi и LTE, чтобы переход с 15 мс Wi-Fi на 110 мс LTE не вызывал ложный скачок джиттера!
  */
 export function updateNodeSmartMetrics(
   node: VpnNode,
@@ -234,13 +279,61 @@ export function updateNodeSmartMetrics(
     return degradedScore;
   }
 
+  // При успешном ответе сбрасываем счётчик последовательных сбоев и флаги карантина
+  node.consecutiveFailures = 0;
+  node.quarantinedUntil = null;
+  node.quarantinedOnNetwork = null;
+  node.unavailableReason = null;
+  node.lastError = undefined;
+
   const cleanRtt = Math.round(sampleRttMs);
-  const prevEma =
-    typeof node.emaLatencyMs === 'number' && node.emaLatencyMs > 0
-      ? node.emaLatencyMs
-      : cleanRtt;
-  const prevJitter =
-    typeof node.jitterMs === 'number' && node.jitterMs >= 0 ? node.jitterMs : 0;
+  const normalizedNet =
+    networkType === 'ethernet' ? 'wifi' : networkType;
+  const switchedNetwork =
+    normalizedNet !== 'unknown' &&
+    Boolean(node.lastSuccessNetwork && node.lastSuccessNetwork !== normalizedNet);
+
+  let prevEma: number;
+  if (normalizedNet === 'cellular') {
+    if (typeof node.cellularEmaLatencyMs === 'number' && node.cellularEmaLatencyMs > 0) {
+      prevEma = node.cellularEmaLatencyMs;
+    } else if (
+      switchedNetwork ||
+      (typeof node.wifiEmaLatencyMs === 'number' && node.wifiEmaLatencyMs > 0)
+    ) {
+      prevEma = cleanRtt;
+    } else {
+      prevEma =
+        typeof node.emaLatencyMs === 'number' && node.emaLatencyMs > 0
+          ? node.emaLatencyMs
+          : cleanRtt;
+    }
+  } else if (normalizedNet === 'wifi') {
+    if (typeof node.wifiEmaLatencyMs === 'number' && node.wifiEmaLatencyMs > 0) {
+      prevEma = node.wifiEmaLatencyMs;
+    } else if (
+      switchedNetwork ||
+      (typeof node.cellularEmaLatencyMs === 'number' && node.cellularEmaLatencyMs > 0)
+    ) {
+      prevEma = cleanRtt;
+    } else {
+      prevEma =
+        typeof node.emaLatencyMs === 'number' && node.emaLatencyMs > 0
+          ? node.emaLatencyMs
+          : cleanRtt;
+    }
+  } else {
+    prevEma =
+      typeof node.emaLatencyMs === 'number' && node.emaLatencyMs > 0
+        ? node.emaLatencyMs
+        : cleanRtt;
+  }
+
+  const prevJitter = switchedNetwork
+    ? 0
+    : typeof node.jitterMs === 'number' && node.jitterMs >= 0
+      ? node.jitterMs
+      : 0;
 
   const delta = Math.abs(cleanRtt - prevEma);
   const nextEma = Math.round(prevEma * 0.65 + cleanRtt * 0.35);
@@ -292,23 +385,18 @@ export function updateNodeSmartMetrics(
     else speedPoints = -15; // сервер «задушен» по скорости
   }
 
-  const totalScore = Math.max(1, Math.min(100, latencyPoints + jitterPoints + reliabilityPoints + speedPoints));
+  const totalScore = Math.max(
+    1,
+    Math.min(100, latencyPoints + jitterPoints + reliabilityPoints + speedPoints)
+  );
   node.smartScore = totalScore;
 
-  if (networkType === 'cellular') {
-    const prevCellEma =
-      typeof node.cellularEmaLatencyMs === 'number' && node.cellularEmaLatencyMs > 0
-        ? node.cellularEmaLatencyMs
-        : cleanRtt;
-    node.cellularEmaLatencyMs = Math.round(prevCellEma * 0.65 + cleanRtt * 0.35);
+  if (normalizedNet === 'cellular') {
+    node.cellularEmaLatencyMs = nextEma;
     node.cellularScore = totalScore;
     node.lastSuccessNetwork = 'cellular';
-  } else if (networkType === 'wifi' || networkType === 'ethernet') {
-    const prevWifiEma =
-      typeof node.wifiEmaLatencyMs === 'number' && node.wifiEmaLatencyMs > 0
-        ? node.wifiEmaLatencyMs
-        : cleanRtt;
-    node.wifiEmaLatencyMs = Math.round(prevWifiEma * 0.65 + cleanRtt * 0.35);
+  } else if (normalizedNet === 'wifi') {
+    node.wifiEmaLatencyMs = nextEma;
     node.wifiScore = totalScore;
     node.lastSuccessNetwork = 'wifi';
   }
@@ -318,7 +406,8 @@ export function updateNodeSmartMetrics(
 
 /**
  * Вычисляет эффективный сетевой рейтинг узла с учётом особенностей протокола на текущей сети:
- * - На мобильной сети (LTE/4G): бонус для LTE-серверов, мостов [через РФ] и VLESS Reality; осторожная оценка непроверенных UDP/QUIC узлов.
+ * - На мобильной сети (LTE/4G): +18 для выделенных LTE / [через РФ] релеев, +10 для обычных VLESS Reality (+6 дополнительно для LTE Reality);
+ *   осторожная оценка непроверенных прямых UDP/QUIC узлов.
  * - На домашнем Wi-Fi: бонус для скоростных прямых узлов и подтверждённых Wi-Fi чемпионов.
  */
 export function getNetworkProtocolAdjustedScore(
@@ -331,17 +420,18 @@ export function getNetworkProtocolAdjustedScore(
 
   if (networkType === 'cellular') {
     let score = node.cellularScore ?? fallbackBase;
-    if (isMobileCarrierFriendlyNode(node)) {
+    const dedicatedRelay = isDedicatedMobileRelayNode(node);
+    if (dedicatedRelay) {
       score += 18;
     }
-    if (node.protocol === 'vless' && node.tls === 'reality') {
-      score += 10;
+    if (node.tls === 'reality') {
+      score += dedicatedRelay ? 6 : 10;
     }
-    // Если протокол чисто UDP/QUIC (Hysteria2/TUIC/WG) и не является релеем через РФ,
-    // и ещё не доказал свою работоспособность на LTE — даём небольшой приоритет TCP Reality/релеям
+    // Если протокол чисто UDP/QUIC (Hysteria2/TUIC/WG) и не является выделенным релеем через РФ,
+    // и ещё не доказал свою работоспособность на LTE — даём приоритет TCP Reality/релеям
     if (
       isUdpBasedVpnProtocol(node.protocol) &&
-      !isMobileCarrierFriendlyNode(node) &&
+      !dedicatedRelay &&
       (node.cellularScore ?? 0) < 65
     ) {
       score -= 12;
@@ -352,7 +442,10 @@ export function getNetworkProtocolAdjustedScore(
   if (networkType === 'wifi' || networkType === 'ethernet') {
     let score = node.wifiScore ?? fallbackBase;
     const isDedicatedSlowLteRelay = /\blte\b|\b4g\b/i.test(node.name || '');
-    if (!isDedicatedSlowLteRelay && (isUdpBasedVpnProtocol(node.protocol) || node.tls === 'reality')) {
+    if (
+      !isDedicatedSlowLteRelay &&
+      (isUdpBasedVpnProtocol(node.protocol) || node.tls === 'reality')
+    ) {
       score += 6;
     }
     return Math.max(1, Math.min(120, score));
@@ -424,27 +517,56 @@ export function rankCandidatesSmart(
   nodes: VpnNode[],
   excludeNodeId?: string | null,
   now = Date.now(),
-  preferMobileFriendly = false
+  preferMobileFriendly = false,
+  preferTcpOverUdp = false
 ): VpnNode[] {
   return [...nodes]
     .filter((n) => n.enabled && n.id !== excludeNodeId)
     .sort((a, b) => {
-      const aQuarantined = Boolean(a.quarantinedUntil && a.quarantinedUntil > now) || a.status === 'down';
-      const bQuarantined = Boolean(b.quarantinedUntil && b.quarantinedUntil > now) || b.status === 'down';
+      const aQuarantined =
+        Boolean(a.quarantinedUntil && a.quarantinedUntil > now) || a.status === 'down';
+      const bQuarantined =
+        Boolean(b.quarantinedUntil && b.quarantinedUntil > now) || b.status === 'down';
       if (aQuarantined !== bQuarantined) return aQuarantined ? 1 : -1;
 
+      if (preferTcpOverUdp) {
+        const aTcp = !isUdpBasedVpnProtocol(a.protocol);
+        const bTcp = !isUdpBasedVpnProtocol(b.protocol);
+        if (aTcp !== bTcp) return aTcp ? -1 : 1;
+      }
+
       if (preferMobileFriendly) {
+        const aDed = isDedicatedMobileRelayNode(a);
+        const bDed = isDedicatedMobileRelayNode(b);
+        if (aDed !== bDed) return aDed ? -1 : 1;
+
         const aMob = isMobileCarrierFriendlyNode(a);
         const bMob = isMobileCarrierFriendlyNode(b);
         if (aMob !== bMob) return aMob ? -1 : 1;
       }
 
-      const aScore = preferMobileFriendly ? getNetworkProtocolAdjustedScore(a, 'cellular') : (a.wifiScore ?? a.smartScore ?? (a.latencyMs ? Math.max(15, 90 - Math.round(a.latencyMs / 10)) : 50));
-      const bScore = preferMobileFriendly ? getNetworkProtocolAdjustedScore(b, 'cellular') : (b.wifiScore ?? b.smartScore ?? (b.latencyMs ? Math.max(15, 90 - Math.round(b.latencyMs / 10)) : 50));
+      const aScore = preferMobileFriendly
+        ? getNetworkProtocolAdjustedScore(a, 'cellular')
+        : (a.wifiScore ??
+          a.smartScore ??
+          (a.latencyMs ? Math.max(15, 90 - Math.round(a.latencyMs / 10)) : 50));
+      const bScore = preferMobileFriendly
+        ? getNetworkProtocolAdjustedScore(b, 'cellular')
+        : (b.wifiScore ??
+          b.smartScore ??
+          (b.latencyMs ? Math.max(15, 90 - Math.round(b.latencyMs / 10)) : 50));
       if (Math.abs(bScore - aScore) >= 4) return bScore - aScore;
 
-      const aLat = (preferMobileFriendly ? a.cellularEmaLatencyMs : a.wifiEmaLatencyMs) ?? a.emaLatencyMs ?? a.latencyMs ?? 9999;
-      const bLat = (preferMobileFriendly ? b.cellularEmaLatencyMs : b.wifiEmaLatencyMs) ?? b.emaLatencyMs ?? b.latencyMs ?? 9999;
+      const aLat =
+        (preferMobileFriendly ? a.cellularEmaLatencyMs : a.wifiEmaLatencyMs) ??
+        a.emaLatencyMs ??
+        a.latencyMs ??
+        9999;
+      const bLat =
+        (preferMobileFriendly ? b.cellularEmaLatencyMs : b.wifiEmaLatencyMs) ??
+        b.emaLatencyMs ??
+        b.latencyMs ??
+        9999;
       if (aLat !== bLat) return aLat - bLat;
 
       return a.priority - b.priority;
@@ -454,16 +576,42 @@ export function rankCandidatesSmart(
 /**
  * Формирует диверсифицированный пакет кандидатов для параллельной гонки (Parallel Hedged Race):
  * берёт лучший узел из Подписки №1, затем лучший из Подписки №2, затем внешний мост 127.0.0.1 и личные ключи по кругу.
- * Благодаря этому даже при полном падении целого VPN-провайдера живой резерв находится за < 0.4 сек!
+ * Если текущий упавший узел работал по чистому UDP/QUIC (`hysteria2`/`tuic`/`wireguard`) или передан `preferTcpOverUdp = true`,
+ * автоматически повышает приоритет TCP / VLESS Reality узлов для мгновенного ухода от блокировки UDP оператором!
  */
 export function buildDiversifiedFailoverBatch(
   nodes: VpnNode[],
   excludeNodeId?: string | null,
   maxBatchSize = 6,
-  now = Date.now(),
-  preferMobileFriendly = false
+  nowOrIsCellular: number | boolean = Date.now(),
+  preferMobileOrPreferTcp = false,
+  preferTcpOverUdpArg = false
 ): VpnNode[] {
-  const ranked = rankCandidatesSmart(nodes, excludeNodeId, now, preferMobileFriendly);
+  const now =
+    typeof nowOrIsCellular === 'number' ? nowOrIsCellular : Date.now();
+  const preferMobileFriendly =
+    typeof nowOrIsCellular === 'boolean'
+      ? nowOrIsCellular
+      : Boolean(preferMobileOrPreferTcp);
+  const explicitPreferTcp =
+    typeof nowOrIsCellular === 'boolean'
+      ? Boolean(preferMobileOrPreferTcp)
+      : Boolean(preferTcpOverUdpArg);
+
+  const failingActiveNode = excludeNodeId
+    ? nodes.find((n) => n.id === excludeNodeId)
+    : undefined;
+  const effectivePreferTcp =
+    explicitPreferTcp ||
+    Boolean(failingActiveNode && isUdpBasedVpnProtocol(failingActiveNode.protocol));
+
+  const ranked = rankCandidatesSmart(
+    nodes,
+    excludeNodeId,
+    now,
+    preferMobileFriendly,
+    effectivePreferTcp
+  );
   if (ranked.length <= maxBatchSize) return ranked;
 
   const buckets = new Map<string, VpnNode[]>();
@@ -474,11 +622,21 @@ export function buildDiversifiedFailoverBatch(
     buckets.set(key, list);
   }
 
-  const batch: VpnNode[] = [];
-  // Если мы на мобильном интернете (LTE/4G), гарантируем, что в первую же гонку попадут все LTE / «через РФ» серверы из всех подписок!
-  if (preferMobileFriendly) {
+  // Если требуется уход с UDP на TCP/Reality, внутри каждой подписки выдвигаем лучший TCP-узел на 1-е место
+  if (effectivePreferTcp) {
     for (const list of buckets.values()) {
-      const mobIdx = list.findIndex((n) => isMobileCarrierFriendlyNode(n));
+      const tcpIdx = list.findIndex((n) => !isUdpBasedVpnProtocol(n.protocol));
+      if (tcpIdx > 0) {
+        const [tcpNode] = list.splice(tcpIdx, 1);
+        list.unshift(tcpNode);
+      }
+    }
+  } else if (preferMobileFriendly) {
+    // Если мы на мобильном интернете (LTE/4G), гарантируем, что в первую же гонку попадут все LTE / «через РФ» серверы из всех подписок!
+    for (const list of buckets.values()) {
+      const dedIdx = list.findIndex((n) => isDedicatedMobileRelayNode(n));
+      const mobIdx =
+        dedIdx >= 0 ? dedIdx : list.findIndex((n) => isMobileCarrierFriendlyNode(n));
       if (mobIdx > 0) {
         const [mobNode] = list.splice(mobIdx, 1);
         list.unshift(mobNode);
@@ -486,6 +644,7 @@ export function buildDiversifiedFailoverBatch(
     }
   }
 
+  const batch: VpnNode[] = [];
   let addedInRound = true;
   while (batch.length < maxBatchSize && addedInRound) {
     addedInRound = false;

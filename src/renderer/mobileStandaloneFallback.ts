@@ -19,6 +19,7 @@ import {
   classifyAndroidAppCategory,
   detectZombieTunnelStall,
   getNodeProviderGroupKey,
+  isDedicatedMobileRelayNode,
   isMobileCarrierFriendlyNode,
   isSubscriptionDueForAutoRefresh,
   isUdpBasedVpnProtocol,
@@ -54,6 +55,13 @@ import type {
   VpnStateSnapshot,
 } from '../shared/types';
 import { parseVpnImportPayload } from '../shared/uriParser';
+import {
+  APP_VERSION,
+  createDefaultAppUpdateInfo,
+  GITHUB_RELEASES_LATEST_URL,
+  GITHUB_RELEASES_PAGE_URL,
+  parseGitHubReleasePayload,
+} from '../shared/versionUpdater';
 
 interface AegisNativeVpnBridge {
   startVpn(options: {
@@ -165,9 +173,32 @@ interface AegisNativeVpnBridge {
     watchdogJson: string;
   }): Promise<{ updated: boolean }>;
   launchApp(options: { packageName: string }): Promise<{ launched: boolean }>;
+  downloadAndInstallApk(options: {
+    url: string;
+  }): Promise<{
+    started: boolean;
+    installedIntentLaunched?: boolean;
+    needsInstallPermission?: boolean;
+    sha256?: string;
+    sizeBytes?: number;
+    filePath?: string;
+    message?: string;
+  }>;
+  getUpdateInstallStatus(): Promise<{
+    downloading: boolean;
+    progressPercent: number;
+    downloadedBytes: number;
+    totalBytes: number;
+    statusMessage: string;
+    sha256: string;
+    canInstallPackages: boolean;
+    appVersionName: string;
+    appVersionCode: number;
+  }>;
 }
 
-const AegisNativeVpn = registerPlugin<AegisNativeVpnBridge>('AegisNativeVpn');
+const AegisNativeVpn: AegisNativeVpnBridge =
+  registerPlugin<AegisNativeVpnBridge>('AegisNativeVpn');
 
 const STORAGE_KEY = 'aegismesh_mobile_native_v2';
 const PIN_HASH_KEY = 'aegismesh_mobile_pin_v2';
@@ -348,6 +379,7 @@ function createInitialCleanState(): VpnStateSnapshot {
     installedUserApps: [],
     emergencyAppPackage: null,
     telemetry: createCleanTelemetry(),
+    appUpdate: createDefaultAppUpdateInfo(APP_VERSION),
   };
 }
 
@@ -428,6 +460,13 @@ function getStateInternal(): VpnStateSnapshot {
             : [],
           emergencyAppPackage: parsed.emergencyAppPackage || null,
           telemetry: createCleanTelemetry(),
+          appUpdate: parsed.appUpdate
+            ? {
+                ...createDefaultAppUpdateInfo(APP_VERSION),
+                ...parsed.appUpdate,
+                currentVersion: APP_VERSION,
+              }
+            : createDefaultAppUpdateInfo(APP_VERSION),
         };
         syncExternalBridgeNodesMobile(localSnap);
         return localSnap;
@@ -786,11 +825,13 @@ async function probeTunnelNodeDelayMobile(
   node: VpnNode,
   timeoutMs = 4200
 ): Promise<number | null> {
+  const netType: PhysicalNetworkProfile =
+    lastObservedNetworkTypeMobile === 'cellular' ? 'cellular' : 'wifi';
   if (!Capacitor.isNativePlatform()) {
     const simLat = node.latencyMs ?? 45;
-    updateNodeSmartMetrics(node, simLat, undefined, lastObservedNetworkTypeMobile);
+    updateNodeSmartMetrics(node, simLat, undefined, netType);
     if (localSnap) {
-      rememberBestNetworkChampionMobile(localSnap, node, lastObservedNetworkTypeMobile);
+      rememberBestNetworkChampionMobile(localSnap, node, netType);
     }
     return simLat;
   }
@@ -801,18 +842,18 @@ async function probeTunnelNodeDelayMobile(
     });
     if (res.reachable && typeof res.delayMs === 'number' && res.delayMs > 0) {
       const cleanMs = Math.round(res.delayMs);
-      updateNodeSmartMetrics(node, cleanMs, undefined, lastObservedNetworkTypeMobile);
+      updateNodeSmartMetrics(node, cleanMs, undefined, netType);
       node.lastCheckedAt = Date.now();
       node.lastError = undefined;
       if (localSnap) {
-        rememberBestNetworkChampionMobile(localSnap, node, lastObservedNetworkTypeMobile);
+        rememberBestNetworkChampionMobile(localSnap, node, netType);
       }
       return cleanMs;
     }
   } catch {
     // Сквозная проверка не прошла
   }
-  updateNodeSmartMetrics(node, null, undefined, lastObservedNetworkTypeMobile);
+  updateNodeSmartMetrics(node, null, undefined, netType);
   return null;
 }
 
@@ -906,7 +947,12 @@ async function probeSingleNodeAiMobile(
         timeoutMs: 5200,
       });
       if (raw.reachable && typeof raw.latencyMs === 'number' && raw.latencyMs > 0) {
-        updateNodeSmartMetrics(node, raw.latencyMs);
+        updateNodeSmartMetrics(
+          node,
+          raw.latencyMs,
+          undefined,
+          lastObservedNetworkTypeMobile === 'cellular' ? 'cellular' : 'wifi'
+        );
       }
       const parsedHtmlAllowed =
         raw.geminiHtmlAllowed === 'true'
@@ -1297,6 +1343,8 @@ function pushEvent(
 }
 
 async function pingSingleNodeNative(node: VpnNode): Promise<number | null> {
+  const netType: PhysicalNetworkProfile =
+    lastObservedNetworkTypeMobile === 'cellular' ? 'cellular' : 'wifi';
   if (Capacitor.isNativePlatform()) {
     const s = getStateInternal();
     const baseQuarantineSec = s.settings.quarantineDurationSec || 45;
@@ -1319,7 +1367,9 @@ async function pingSingleNodeNative(node: VpnNode): Promise<number | null> {
       markNodeTemporarilyUnavailable(
         node,
         'Временный таймаут сквозной проверки туннеля',
-        baseQuarantineSec
+        baseQuarantineSec,
+        Date.now(),
+        netType
       );
       return null;
     }
@@ -1346,26 +1396,30 @@ async function pingSingleNodeNative(node: VpnNode): Promise<number | null> {
       node.lastCheckedAt = Date.now();
       if (res.reachable && typeof res.latencyMs === 'number') {
         const cleanMs = Math.max(1, Math.round(res.latencyMs));
-        updateNodeSmartMetrics(node, cleanMs);
+        updateNodeSmartMetrics(node, cleanMs, undefined, netType);
         node.consecutiveFailures = 0;
         node.quarantinedUntil = null;
         node.lastError = undefined;
         if (node.status !== 'active') node.status = 'standby';
         return node.latencyMs;
       }
-      updateNodeSmartMetrics(node, null);
+      updateNodeSmartMetrics(node, null, undefined, netType);
       markNodeTemporarilyUnavailable(
         node,
         res.error || 'Таймаут соединения',
-        baseQuarantineSec
+        baseQuarantineSec,
+        Date.now(),
+        netType
       );
       return null;
     } catch (err) {
-      updateNodeSmartMetrics(node, null);
+      updateNodeSmartMetrics(node, null, undefined, netType);
       markNodeTemporarilyUnavailable(
         node,
         err instanceof Error ? err.message : 'Сервер временно недоступен',
-        baseQuarantineSec
+        baseQuarantineSec,
+        Date.now(),
+        netType
       );
       return null;
     }
@@ -1514,7 +1568,12 @@ async function runMobileWatchdogTick(): Promise<void> {
         });
         if (speedRes.ok && speedRes.kbps > 0) {
           s.telemetry.measuredBandwidthKbps = speedRes.kbps;
-          updateNodeSmartMetrics(active, rtt, speedRes.kbps);
+          updateNodeSmartMetrics(
+            active,
+            rtt,
+            speedRes.kbps,
+            lastObservedNetworkTypeMobile === 'cellular' ? 'cellular' : 'wifi'
+          );
           const minKbps = Math.max(120, s.settings.minThroughputKbps || 350);
           if (speedRes.kbps < minKbps) {
             speedDegradedReason = `Низкая скорость «${active.name}» (${speedRes.kbps} Кбит/с < ${minKbps} Кбит/с)`;
@@ -1686,6 +1745,8 @@ async function raceVerifyNodesMobile(
 ): Promise<VpnNode | null> {
   if (candidates.length === 0) return null;
   const baseQuarantineSec = localSnap?.settings.quarantineDurationSec || 45;
+  const netType: PhysicalNetworkProfile =
+    lastObservedNetworkTypeMobile === 'cellular' ? 'cellular' : 'wifi';
   const results = await Promise.all(
     candidates.map(async (cand) => {
       const delay = await probeTunnelNodeDelayMobile(cand, timeoutMs);
@@ -1693,7 +1754,9 @@ async function raceVerifyNodesMobile(
         markNodeTemporarilyUnavailable(
           cand,
           'Временный таймаут сквозной проверки туннеля',
-          baseQuarantineSec
+          baseQuarantineSec,
+          Date.now(),
+          netType
         );
       } else {
         cand.consecutiveFailures = 0;
@@ -1809,10 +1872,13 @@ async function performMobileFailover(
   failedNode: VpnNode,
   reason: string
 ): Promise<void> {
-  failedNode.status = 'quarantined';
-  failedNode.latencyMs = null;
-  failedNode.quarantinedUntil =
-    Date.now() + s.settings.quarantineDurationSec * 1000;
+  markNodeTemporarilyUnavailable(
+    failedNode,
+    reason,
+    s.settings.quarantineDurationSec || 45,
+    Date.now(),
+    lastObservedNetworkTypeMobile === 'cellular' ? 'cellular' : 'wifi'
+  );
 
   // Самоисцеление подписки (Self-Healing Refresh): если упал узел подписки, тихо проверяем свежие IP в фоне!
   if (failedNode.subscriptionId && s.settings.autoRefreshSubscriptions !== false) {
@@ -1829,7 +1895,7 @@ async function performMobileFailover(
   const eligible = s.nodes.filter(
     (n) =>
       n.enabled &&
-      (isNodeInEnabledSourceMobile(s, n) || isMobileCarrierFriendlyNode(n)) &&
+      (isNodeInEnabledSourceMobile(s, n) || isDedicatedMobileRelayNode(n)) &&
       n.id !== failedNode.id
   );
 
@@ -2356,7 +2422,12 @@ export async function handleMobileStandaloneCall(
         try {
           const sp = await AegisNativeVpn.measureTunnelSpeed({ bytes: 147456, timeoutMs: 4200 });
           if (sp.ok && sp.kbps > 0) {
-            updateNodeSmartMetrics(bestInTunnel, bestInTunnel.latencyMs, sp.kbps);
+            updateNodeSmartMetrics(
+              bestInTunnel,
+              bestInTunnel.latencyMs,
+              sp.kbps,
+              lastObservedNetworkTypeMobile === 'cellular' ? 'cellular' : 'wifi'
+            );
             if (s.telemetry) {
               s.telemetry.measuredBandwidthKbps = sp.kbps;
               s.telemetry.smartScore = bestInTunnel.smartScore ?? null;
@@ -2486,7 +2557,7 @@ export async function handleMobileStandaloneCall(
         : s.settings.bestWifiNodeId;
       const champion = pickRememberedNetworkChampion(
         s.nodes.filter(
-          (n) => n.enabled && (isNodeInEnabledSourceMobile(s, n) || isMobileCarrierFriendlyNode(n))
+          (n) => n.enabled && (isNodeInEnabledSourceMobile(s, n) || isDedicatedMobileRelayNode(n))
         ),
         netProfile,
         rememberedId
@@ -2502,7 +2573,7 @@ export async function handleMobileStandaloneCall(
         s.nodes.filter(
           (n) =>
             n.enabled &&
-            (isNodeInEnabledSourceMobile(s, n) || isMobileCarrierFriendlyNode(n)) &&
+            (isNodeInEnabledSourceMobile(s, n) || isDedicatedMobileRelayNode(n)) &&
             isMobileCarrierFriendlyNode(n)
         ),
         null,
@@ -2579,7 +2650,9 @@ export async function handleMobileStandaloneCall(
       markNodeTemporarilyUnavailable(
         firstTarget,
         'Временный таймаут сквозной проверки туннеля',
-        s.settings.quarantineDurationSec || 45
+        s.settings.quarantineDurationSec || 45,
+        Date.now(),
+        lastObservedNetworkTypeMobile === 'cellular' ? 'cellular' : 'wifi'
       );
       s.telemetry.verifyingStep =
         'Многоволновой поиск живого сервера (LTE / через РФ / мульти-подписки)...';
@@ -2628,6 +2701,7 @@ export async function handleMobileStandaloneCall(
     s.activeNodeId = verifiedNode.id;
     s.connectionState = 'connected';
     s.connectedSince = Date.now();
+    lastSwitchTimestampMs = Date.now();
     s.killSwitchBlocking = false;
     s.telemetry.verified = true;
     s.telemetry.verifyingStep = undefined;
@@ -2817,6 +2891,151 @@ export async function handleMobileStandaloneCall(
     }
     saveInternal();
     return structuredClone(s);
+  }
+
+  if (path === '/api/update/check') {
+    if (!s.appUpdate) {
+      s.appUpdate = createDefaultAppUpdateInfo(APP_VERSION);
+    }
+
+    if (body?.mockReleasePayload !== undefined) {
+      s.appUpdate = parseGitHubReleasePayload(body.mockReleasePayload, APP_VERSION);
+      if (s.appUpdate.updateAvailable) {
+        pushEvent(
+          s,
+          'security',
+          `Доступна новая версия AegisMesh VPN v${s.appUpdate.latestVersion} (${s.appUpdate.releaseTitle})`
+        );
+      }
+      saveInternal();
+      return { ok: true, update: s.appUpdate, snapshot: structuredClone(s) };
+    }
+
+    const ghHeaders = {
+      Accept: 'application/vnd.github+json',
+      'User-Agent': `AegisMesh-VPN/${APP_VERSION}`,
+    };
+    let rawPayload: unknown = null;
+    let fetchError: string | null = null;
+
+    if (Capacitor.isNativePlatform()) {
+      const tryTunnelFirst = s.connectionState === 'connected';
+      try {
+        const res = await AegisNativeVpn.httpFetch({
+          url: GITHUB_RELEASES_LATEST_URL,
+          timeoutMs: 9000,
+          useTunnelProxy: tryTunnelFirst,
+          headers: ghHeaders,
+        });
+        if (res.status >= 200 && res.status < 300 && res.body.trim()) {
+          rawPayload = res.body;
+        }
+      } catch {
+        // Fallback к прямому соединению
+      }
+
+      if (!rawPayload && tryTunnelFirst) {
+        try {
+          const fallbackRes = await AegisNativeVpn.httpFetch({
+            url: GITHUB_RELEASES_LATEST_URL,
+            timeoutMs: 9000,
+            useTunnelProxy: false,
+            headers: ghHeaders,
+          });
+          if (
+            fallbackRes.status >= 200 &&
+            fallbackRes.status < 300 &&
+            fallbackRes.body.trim()
+          ) {
+            rawPayload = fallbackRes.body;
+          }
+        } catch (err) {
+          fetchError =
+            err instanceof Error ? err.message : 'Не удалось связаться с GitHub Releases';
+        }
+      }
+    }
+
+    if (!rawPayload && typeof fetch === 'function') {
+      try {
+        const r = await fetch(GITHUB_RELEASES_LATEST_URL, {
+          headers: { Accept: 'application/vnd.github+json' },
+        });
+        if (r.ok) {
+          rawPayload = await r.json();
+        } else {
+          fetchError = `GitHub API вернул HTTP ${r.status}`;
+        }
+      } catch (err) {
+        fetchError =
+          err instanceof Error ? err.message : 'Не удалось связаться с GitHub Releases';
+      }
+    }
+
+    if (rawPayload) {
+      s.appUpdate = parseGitHubReleasePayload(rawPayload, APP_VERSION);
+      if (s.appUpdate.updateAvailable) {
+        pushEvent(
+          s,
+          'security',
+          `Доступна новая версия AegisMesh VPN v${s.appUpdate.latestVersion} (${s.appUpdate.releaseTitle})`
+        );
+      }
+    } else {
+      s.appUpdate = {
+        ...createDefaultAppUpdateInfo(APP_VERSION),
+        ...s.appUpdate,
+        currentVersion: APP_VERSION,
+        checkedAt: Date.now(),
+        downloading: false,
+        error: fetchError,
+      };
+    }
+
+    saveInternal();
+    return { ok: true, update: s.appUpdate, snapshot: structuredClone(s) };
+  }
+
+  if (path === '/api/update/install') {
+    if (!s.appUpdate) {
+      s.appUpdate = createDefaultAppUpdateInfo(APP_VERSION);
+    }
+    const targetUrl =
+      (typeof body?.url === 'string' && body.url.trim()) ||
+      s.appUpdate.apkDownloadUrl ||
+      s.appUpdate.desktopDownloadUrl ||
+      s.appUpdate.htmlUrl ||
+      GITHUB_RELEASES_PAGE_URL;
+
+    if (Capacitor.isNativePlatform()) {
+      const res = await AegisNativeVpn.downloadAndInstallApk({ url: targetUrl });
+      s.appUpdate = {
+        ...s.appUpdate,
+        downloading: false,
+        downloadProgress: 100,
+        error: null,
+        statusMessage:
+          res.message || 'Запущена установка обновления AegisMesh-VPN.apk',
+      };
+    } else {
+      s.appUpdate = {
+        ...s.appUpdate,
+        downloading: false,
+        downloadProgress: 100,
+        error: null,
+        statusMessage: `Готова ссылка для скачивания: ${targetUrl}`,
+      };
+      if (typeof window !== 'undefined' && typeof window.open === 'function') {
+        try {
+          window.open(targetUrl, '_blank', 'noopener,noreferrer');
+        } catch {
+          // Игнорируем блокировку всплывающего окна в тестовой среде
+        }
+      }
+    }
+
+    saveInternal();
+    return { ok: true, update: s.appUpdate, snapshot: structuredClone(s) };
   }
 
   if (path === '/api/audit') {

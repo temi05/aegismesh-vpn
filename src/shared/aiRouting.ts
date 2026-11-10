@@ -89,6 +89,15 @@ export const AI_SERVICE_CATALOG: AiServicePresetMeta[] = [
       'labs.google',
       'deepmind.google',
       'ai.google.dev',
+      'stun.l.google.com',
+      'stun1.l.google.com',
+      'ogs.google.com',
+      'play.googleapis.com',
+      'firebasevertexai.googleapis.com',
+      'aiplatform.googleapis.com',
+      'clients6.google.com',
+      'whisk.google',
+      'fx.google',
     ],
   },
   {
@@ -112,6 +121,12 @@ export const AI_SERVICE_CATALOG: AiServicePresetMeta[] = [
       'featuregates.org',
       'statsigapi.net',
       'ai.com',
+      'ws.chatgpt.com',
+      'webrtc.chatgpt.com',
+      'turn.livekit.cloud',
+      'operator.chatgpt.com',
+      'cdn.oaistatic.com',
+      'files.oaiusercontent.com',
     ],
   },
   {
@@ -125,6 +140,10 @@ export const AI_SERVICE_CATALOG: AiServicePresetMeta[] = [
       'x.ai',
       'api.x.ai',
       'accounts.x.ai',
+      'api.grok.com',
+      'ws.grok.com',
+      'cdn.grok.com',
+      'console.x.ai',
     ],
   },
   {
@@ -145,6 +164,15 @@ export const AI_SERVICE_CATALOG: AiServicePresetMeta[] = [
       'deepseek.com',
       'mistral.ai',
       'poe.com',
+      'api.anthropic.com',
+      'console.anthropic.com',
+      'assets.claude.ai',
+      'api.perplexity.ai',
+      'chat.deepseek.com',
+      'api.deepseek.com',
+      'copilot.cloud.microsoft',
+      'sydney.bing.com',
+      'edgeservices.bing.com',
     ],
   },
 ];
@@ -587,8 +615,18 @@ export function evaluateAiProbeResult(
     !googleCountry &&
     Boolean(fallbackHint && AI_UNSUPPORTED_COUNTRY_CODES.has(fallbackHint));
 
-  if ((cfUnsupported && googleUnsupported) || (cfUnsupported && !googleCountry) || hintOnlyUnsupported) {
-    const blockedCode = googleCountry || cfCountry || fallbackHint || 'RU';
+  if (
+    (cfUnsupported && googleUnsupported) ||
+    (cfUnsupported && !googleCountry) ||
+    (requireGemini && googleUnsupported && !cfCountry) ||
+    hintOnlyUnsupported
+  ) {
+    const blockedCode =
+      (requireGemini ? googleCountry : cfCountry) ||
+      cfCountry ||
+      googleCountry ||
+      fallbackHint ||
+      'RU';
     node.aiExitCountry = blockedCode;
     node.aiStatus = 'blocked';
     node.aiGeminiOk = false;
@@ -652,9 +690,16 @@ export function evaluateAiProbeResult(
   if (geminiOk) score += 60;
   if (chatgptOk) score += 22;
   if (grokOk) score += 18;
+  if (!requireGemini && !geminiOk && (chatgptOk || grokOk)) {
+    score += 45;
+  }
 
   if (score > 0) {
-    const bonusCountry = googleCountry || cfCountry || fallbackHint;
+    const bonusCountry =
+      (requireGemini ? googleCountry : cfCountry) ||
+      cfCountry ||
+      googleCountry ||
+      fallbackHint;
     if (bonusCountry && AI_PREFERRED_COUNTRY_CODES.has(bonusCountry)) {
       score = Math.min(100, score + 5);
     }
@@ -666,31 +711,54 @@ export function evaluateAiProbeResult(
 
   // КРИТИЧЕСКОЕ ПРАВИЛО v3.2+: если у пользователя включён Gemini (основная нейросеть),
   // сервер НИКОГДА не получает статус `AI OK`, если база Google блокирует на нём Gemini!
-  const passesRequiredAi = requireGemini
-    ? geminiOk
-    : (geminiOk || chatgptOk || grokOk);
+  // Если же Gemini отключён пользователем (например, выбран только ChatGPT или Grok),
+  // проверяем совместимость строго по выбранным сервисам и базе Cloudflare!
+  let passesRequiredAi: boolean;
+  if (requireGemini) {
+    passesRequiredAi = geminiOk;
+  } else {
+    const neededChatgpt = enabledServices.includes('chatgpt');
+    const neededGrok = enabledServices.includes('grok');
+    const neededClaudeOther = enabledServices.includes('claude_other');
+    if (neededChatgpt && neededGrok) {
+      passesRequiredAi = chatgptOk || grokOk;
+    } else if (neededChatgpt) {
+      passesRequiredAi = chatgptOk;
+    } else if (neededGrok) {
+      passesRequiredAi = grokOk;
+    } else if (neededClaudeOther) {
+      passesRequiredAi =
+        !cfUnsupported &&
+        (chatgptOk || grokOk || (cStatus === 0 && xStatus === 0));
+    } else {
+      passesRequiredAi = geminiOk || chatgptOk || grokOk;
+    }
+  }
 
   if (passesRequiredAi) {
     node.aiStatus = 'ok';
     node.aiScore = Math.max(50, Math.min(100, score));
     node.aiBlockReason = null;
+    if (!requireGemini && cfCountry) {
+      node.aiExitCountry = cfCountry;
+    }
   } else {
     node.aiStatus = 'blocked';
     node.aiScore = score;
-    if (googleUnsupported) {
+    if (requireGemini && googleUnsupported) {
       node.aiExitCountry = googleCountry!;
       if (cfCountry && cfCountry !== googleCountry && !AI_UNSUPPORTED_COUNTRY_CODES.has(cfCountry)) {
         node.aiBlockReason = `База Google видит этот IP как ${googleCountry} (хотя сервер ${cfCountry}) — Gemini недоступен`;
       } else {
         node.aiBlockReason = `База Google определяет регион ${googleCountry} — Gemini недоступен`;
       }
-    } else if (suspiciousWithoutGoogleProof) {
+    } else if (requireGemini && suspiciousWithoutGoogleProof) {
       node.aiBlockReason = 'Транзитный РФ / LTE сервер не прошёл проверку региона Google для Gemini';
-    } else if (geminiCaptchaSorry) {
+    } else if (requireGemini && geminiCaptchaSorry) {
       node.aiBlockReason = 'Google блокирует IP этого VPS капчей (/sorry/) — Gemini недоступен';
-    } else if (geminiRedirectedToFaq || probe.geminiHtmlAllowed === false) {
+    } else if (requireGemini && (geminiRedirectedToFaq || probe.geminiHtmlAllowed === false)) {
       node.aiBlockReason = `Google ограничивает Gemini для этого IP${effectiveCountry ? ` (${effectiveCountry})` : ''}`;
-    } else if (gStatus === 403 || cStatus === 403 || xStatus === 403) {
+    } else if (gStatus === 403 || cStatus === 403 || xStatus === 403 || probe.chatgptBlockedBody || probe.grokBlockedBody) {
       node.aiBlockReason = 'IP дата-центра заблокирован защитой ИИ (HTTP 403 / антифрод)';
     } else if (gStatus === 429 || cStatus === 429) {
       node.aiBlockReason = 'Слишком много запросов с этого IP (HTTP 429 Rate Limit)';

@@ -19,12 +19,19 @@ export function createId(prefix = 'node'): string {
 
 // Кроссплатформенное декодирование Base64 / Base64URL в UTF-8
 export function decodeBase64Utf8(input: string): string {
-  const normalized = input.trim().replace(/-/g, '+').replace(/_/g, '/');
-  const padLen = (4 - (normalized.length % 4)) % 4;
-  const padded = normalized + '='.repeat(padLen);
+  const clean = input.replace(/\s+/g, '').replace(/-/g, '+').replace(/_/g, '/');
+  const padLen = (4 - (clean.length % 4)) % 4;
+  const padded = clean + '='.repeat(padLen);
 
-  if (typeof Buffer !== 'undefined') {
-    return Buffer.from(padded, 'base64').toString('utf-8');
+  const nodeBuffer = (
+    globalThis as unknown as {
+      Buffer?: {
+        from(data: string, encoding: string): { toString(encoding: string): string };
+      };
+    }
+  ).Buffer;
+  if (typeof nodeBuffer !== 'undefined') {
+    return nodeBuffer.from(padded, 'base64').toString('utf-8');
   }
   const binary = globalThis.atob(padded);
   const bytes = new Uint8Array(binary.length);
@@ -194,6 +201,13 @@ function parseVlessUri(uri: string, priority: number): VpnNode {
   const rawName = url.hash ? safeDecodeComponent(url.hash.slice(1)) : '';
   const name = rawName.trim() || `VLESS ${server}:${port}`;
 
+  const rawFlow = (p.get('flow') || '').trim();
+  const flow = rawFlow
+    ? rawFlow.toLowerCase().startsWith('xtls-rprx-vision')
+      ? 'xtls-rprx-vision'
+      : rawFlow
+    : undefined;
+
   const alpnRaw = p.get('alpn');
   const alpn = alpnRaw
     ? alpnRaw
@@ -210,11 +224,13 @@ function parseVlessUri(uri: string, priority: number): VpnNode {
       port,
       rawUri: uri,
       uuid,
-      flow: p.get('flow') || undefined,
+      flow,
       transport,
       wsPath: p.get('path') || undefined,
       wsHost: p.get('host') || undefined,
-      grpcServiceName: p.get('serviceName') || undefined,
+      grpcServiceName:
+        p.get('serviceName') ||
+        (transport === 'grpc' ? p.get('path') || undefined : undefined),
       tls,
       sni: p.get('sni') || p.get('peer') || p.get('host') || undefined,
       alpn,
@@ -230,11 +246,14 @@ function parseVlessUri(uri: string, priority: number): VpnNode {
 // Парсер VMess (поддержка Base64 JSON формата v2rayN и стандартного URI)
 function parseVmessUri(uri: string, priority: number): VpnNode {
   const body = uri.slice('vmess://'.length).trim();
+  const hashIdx = body.indexOf('#');
+  const payloadPart = hashIdx >= 0 ? body.slice(0, hashIdx).trim() : body;
+  const remarkPart = hashIdx >= 0 ? safeDecodeComponent(body.slice(hashIdx + 1)).trim() : '';
 
-  if (!body.includes('@')) {
+  if (!payloadPart.includes('@')) {
     let jsonStr: string;
     try {
-      jsonStr = decodeBase64Utf8(body.split('#')[0]);
+      jsonStr = decodeBase64Utf8(payloadPart);
     } catch {
       throw new Error('Не удалось декодировать Base64 в ссылке VMess');
     }
@@ -254,8 +273,16 @@ function parseVmessUri(uri: string, priority: number): VpnNode {
 
     const transport = normalizeTransport(String(data.net ?? 'tcp'));
     const tls = normalizeTls(String(data.tls ?? 'none'), 'none');
-    const name = String(data.ps ?? '').trim() || `VMess ${server}:${port}`;
+    const name =
+      remarkPart || String(data.ps ?? '').trim() || `VMess ${server}:${port}`;
     const alpnStr = String(data.alpn ?? '').trim();
+    const allowInsecure =
+      data.allowInsecure === true ||
+      data.allowInsecure === '1' ||
+      data.allowInsecure === 1 ||
+      data.verify_cert === false ||
+      data.insecure === true ||
+      data.insecure === '1';
 
     return createBaseNode(
       {
@@ -270,12 +297,16 @@ function parseVmessUri(uri: string, priority: number): VpnNode {
         transport,
         wsPath: data.path ? String(data.path) : undefined,
         wsHost: data.host ? String(data.host) : undefined,
-        grpcServiceName:
-          transport === 'grpc' && data.path ? String(data.path) : undefined,
+        grpcServiceName: data.serviceName
+          ? String(data.serviceName)
+          : transport === 'grpc' && data.path
+            ? String(data.path)
+            : undefined,
         tls,
         sni: data.sni ? String(data.sni) : data.host ? String(data.host) : undefined,
         alpn: alpnStr ? alpnStr.split(',').map((s) => s.trim()).filter(Boolean) : undefined,
         fingerprint: data.fp ? String(data.fp) : undefined,
+        allowInsecure,
       },
       priority
     );
@@ -290,6 +321,14 @@ function parseVmessUri(uri: string, priority: number): VpnNode {
     throw new Error('Некорректный формат URL ссылки VMess');
   }
   const p = url.searchParams;
+  const transport = normalizeTransport(p.get('type'));
+  const alpnRaw = p.get('alpn');
+  const alpn = alpnRaw
+    ? alpnRaw
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean)
+    : undefined;
   const name =
     (url.hash ? safeDecodeComponent(url.hash.slice(1)).trim() : '') ||
     `VMess ${server}:${port}`;
@@ -302,12 +341,21 @@ function parseVmessUri(uri: string, priority: number): VpnNode {
       port,
       rawUri: uri,
       uuid,
-      method: p.get('encryption') || 'auto',
-      transport: normalizeTransport(p.get('type')),
+      method: p.get('encryption') || p.get('scy') || 'auto',
+      transport,
       wsPath: p.get('path') || undefined,
       wsHost: p.get('host') || undefined,
-      tls: normalizeTls(p.get('security'), 'none'),
-      sni: p.get('sni') || undefined,
+      grpcServiceName:
+        p.get('serviceName') ||
+        (transport === 'grpc' ? p.get('path') || undefined : undefined),
+      tls: normalizeTls(p.get('security') || p.get('tls'), 'none'),
+      sni: p.get('sni') || p.get('peer') || p.get('host') || undefined,
+      alpn,
+      fingerprint: p.get('fp') || undefined,
+      allowInsecure:
+        p.get('allowInsecure') === '1' ||
+        p.get('insecure') === '1' ||
+        p.get('allowInsecure') === 'true',
     },
     priority
   );
@@ -337,12 +385,24 @@ function parseShadowsocksUri(uri: string, priority: number): VpnNode {
     userInfo = raw.slice(0, atIdx);
     hostPort = raw.slice(atIdx + 1);
     if (!userInfo.includes(':')) {
-      userInfo = decodeBase64Utf8(userInfo);
+      let unescaped = userInfo;
+      try {
+        unescaped = decodeURIComponent(userInfo);
+      } catch {
+        unescaped = safeDecodeComponent(userInfo);
+      }
+      userInfo = unescaped.includes(':') ? unescaped : decodeBase64Utf8(unescaped);
     } else {
       userInfo = safeDecodeComponent(userInfo);
     }
   } else {
-    const decoded = decodeBase64Utf8(raw);
+    let unescapedRaw = raw;
+    try {
+      unescapedRaw = decodeURIComponent(raw);
+    } catch {
+      unescapedRaw = safeDecodeComponent(raw);
+    }
+    const decoded = decodeBase64Utf8(unescapedRaw);
     const atIdx = decoded.lastIndexOf('@');
     if (atIdx === -1) {
       throw new Error('Некорректный формат ссылки Shadowsocks (отсутствует @host:port)');
@@ -390,6 +450,14 @@ function parseTrojanUri(uri: string, priority: number): VpnNode {
   }
 
   const p = url.searchParams;
+  const transport = normalizeTransport(p.get('type'));
+  const alpnRaw = p.get('alpn');
+  const alpn = alpnRaw
+    ? alpnRaw
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean)
+    : undefined;
   const name =
     (url.hash ? safeDecodeComponent(url.hash.slice(1)).trim() : '') ||
     `Trojan ${server}:${port}`;
@@ -402,12 +470,15 @@ function parseTrojanUri(uri: string, priority: number): VpnNode {
       port,
       rawUri: uri,
       password,
-      transport: normalizeTransport(p.get('type')),
+      transport,
       wsPath: p.get('path') || undefined,
       wsHost: p.get('host') || undefined,
-      grpcServiceName: p.get('serviceName') || undefined,
+      grpcServiceName:
+        p.get('serviceName') ||
+        (transport === 'grpc' ? p.get('path') || undefined : undefined),
       tls: normalizeTls(p.get('security'), 'tls'),
       sni: p.get('sni') || p.get('peer') || server,
+      alpn,
       fingerprint: p.get('fp') || undefined,
       allowInsecure: p.get('allowInsecure') === '1' || p.get('insecure') === '1',
       realityPublicKey: p.get('pbk') || undefined,
@@ -433,6 +504,16 @@ function parseHysteria2Uri(uri: string, priority: number): VpnNode {
   }
 
   const p = url.searchParams;
+  const alpnRaw = p.get('alpn');
+  const alpn = alpnRaw
+    ? alpnRaw
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean)
+    : undefined;
+  const rawObfs = (p.get('obfs') || '').trim();
+  const obfsType = rawObfs && rawObfs.toLowerCase() !== 'none' ? rawObfs : undefined;
+  const mport = (p.get('mport') || p.get('ports') || '').trim() || undefined;
   const name =
     (url.hash ? safeDecodeComponent(url.hash.slice(1)).trim() : '') ||
     `Hysteria2 ${server}:${port}`;
@@ -447,8 +528,10 @@ function parseHysteria2Uri(uri: string, priority: number): VpnNode {
       password: auth,
       tls: 'tls',
       sni: p.get('sni') || server,
+      alpn,
       allowInsecure: p.get('insecure') === '1' || p.get('allowInsecure') === '1',
-      obfsType: p.get('obfs') || undefined,
+      mport,
+      obfsType,
       obfsPassword: p.get('obfs-password') || undefined,
       upMbps: p.get('upmbps') ? Number(p.get('upmbps')) : undefined,
       downMbps: p.get('downmbps') ? Number(p.get('downmbps')) : undefined,
@@ -460,15 +543,25 @@ function parseHysteria2Uri(uri: string, priority: number): VpnNode {
 // Парсер TUIC v5
 function parseTuicUri(uri: string, priority: number): VpnNode {
   const url = new URL(uri);
-  const uuid = safeDecodeComponent(url.username);
-  const password = safeDecodeComponent(url.password);
+  const p = url.searchParams;
+  const decodedUser = safeDecodeComponent(url.username);
+  let uuid = decodedUser;
+  let password = safeDecodeComponent(url.password);
+  if (!password && decodedUser.includes(':')) {
+    const colonIdx = decodedUser.indexOf(':');
+    uuid = decodedUser.slice(0, colonIdx);
+    password = decodedUser.slice(colonIdx + 1);
+  }
+  if (!password) {
+    password = p.get('password') || '';
+  }
+
   const server = url.hostname;
   const port = Number(url.port || '443');
   if (!uuid || !isValidHost(server) || !isValidPort(port)) {
     throw new Error('Некорректные параметры UUID или сервера в ссылке TUIC');
   }
 
-  const p = url.searchParams;
   const name =
     (url.hash ? safeDecodeComponent(url.hash.slice(1)).trim() : '') ||
     `TUIC ${server}:${port}`;
@@ -494,6 +587,42 @@ function parseTuicUri(uri: string, priority: number): VpnNode {
   );
 }
 
+function parseWireguardReserved(reservedRaw?: string | null): number[] | undefined {
+  if (!reservedRaw) return undefined;
+  const trimmed = reservedRaw.trim();
+  if (!trimmed) return undefined;
+  if (trimmed.includes(',')) {
+    const nums = trimmed
+      .split(',')
+      .map((n) => Number(n.trim()))
+      .filter((n) => Number.isInteger(n) && n >= 0 && n <= 255);
+    return nums.length === 3 ? nums : undefined;
+  }
+  try {
+    const clean = trimmed.replace(/-/g, '+').replace(/_/g, '/');
+    const padded = clean + '='.repeat((4 - (clean.length % 4)) % 4);
+    const nodeBuffer = (
+      globalThis as unknown as {
+        Buffer?: {
+          from(data: string, encoding: string): ArrayLike<number>;
+        };
+      }
+    ).Buffer;
+    if (typeof nodeBuffer !== 'undefined') {
+      const buf = nodeBuffer.from(padded, 'base64');
+      if (buf.length === 3) return [buf[0], buf[1], buf[2]];
+    } else if (typeof globalThis.atob === 'function') {
+      const bin = globalThis.atob(padded);
+      if (bin.length === 3) {
+        return [bin.charCodeAt(0), bin.charCodeAt(1), bin.charCodeAt(2)];
+      }
+    }
+  } catch {
+    // ignore invalid base64
+  }
+  return undefined;
+}
+
 // Парсер WireGuard URI (wireguard:// или wg://)
 function parseWireguardUri(uri: string, priority: number): VpnNode {
   const normalized = uri.startsWith('wg://')
@@ -510,18 +639,13 @@ function parseWireguardUri(uri: string, priority: number): VpnNode {
     throw new Error('В ссылке WireGuard требуются PrivateKey, PublicKey, сервер и порт');
   }
 
-  const addrParam = p.get('address') || p.get('ip') || '10.7.0.2/32';
-  const addresses = addrParam
+  const rawAddr = p.get('address') || p.get('ip') || '10.7.0.2/32';
+  const addresses = rawAddr
     .split(',')
     .map((s) => s.trim())
-    .filter(Boolean);
-  const reservedParam = p.get('reserved');
-  const reserved = reservedParam
-    ? reservedParam
-        .split(',')
-        .map((n) => Number(n.trim()))
-        .filter((n) => Number.isInteger(n))
-    : undefined;
+    .filter(Boolean)
+    .map((entry) => (entry.includes('/') ? entry : entry.includes(':') ? `${entry}/128` : `${entry}/32`));
+  const reserved = parseWireguardReserved(p.get('reserved'));
 
   const name =
     (url.hash ? safeDecodeComponent(url.hash.slice(1)).trim() : '') ||
@@ -538,7 +662,7 @@ function parseWireguardUri(uri: string, priority: number): VpnNode {
       wgPublicKey: publicKey,
       wgPreSharedKey: p.get('presharedkey') || p.get('psk') || undefined,
       wgLocalAddress: addresses,
-      wgMtu: p.get('mtu') ? Number(p.get('mtu')) : 1408,
+      wgMtu: p.get('mtu') ? Number(p.get('mtu')) : 1380,
       wgReserved: reserved && reserved.length === 3 ? reserved : undefined,
     },
     priority
@@ -683,7 +807,7 @@ export function parseSingleVpnUri(uri: string, priority = 1): VpnNode {
   throw new Error(`Неподдерживаемый протокол или формат строки: ${trimmed.slice(0, 32)}...`);
 }
 
-// Попытка извлечь VPN-узлы из JSON-профиля sing-box (если панель подписки вернула JSON с outbounds)
+// Попытка извлечь VPN-узлы из JSON-профиля sing-box (если панель подписки вернула JSON с outbounds / endpoints)
 function tryParseSingboxJsonOutbounds(
   rawJson: string,
   startingPriority: number,
@@ -693,11 +817,16 @@ function tryParseSingboxJsonOutbounds(
   try {
     const parsed = JSON.parse(rawJson) as Record<string, unknown>;
     const outbounds = Array.isArray(parsed)
-      ? parsed
+      ? (parsed as Array<Record<string, unknown>>)
       : Array.isArray(parsed.outbounds)
         ? (parsed.outbounds as Array<Record<string, unknown>>)
-        : null;
-    if (!outbounds) return null;
+        : [];
+    const endpoints =
+      !Array.isArray(parsed) && Array.isArray(parsed.endpoints)
+        ? (parsed.endpoints as Array<Record<string, unknown>>)
+        : [];
+    const combinedItems = [...outbounds, ...endpoints];
+    if (combinedItems.length === 0) return null;
 
     const nodes: VpnNode[] = [];
     let prio = startingPriority;
@@ -713,27 +842,90 @@ function tryParseSingboxJsonOutbounds(
       'http',
     ]);
 
-    for (const ob of outbounds) {
-      if (!ob || typeof ob !== 'object') continue;
-      const type = String(ob.type || '').toLowerCase();
+    for (const item of combinedItems) {
+      if (!item || typeof item !== 'object') continue;
+      const type = String(item.type || '').toLowerCase();
       if (!supportedTypes.has(type)) continue;
-      const server = String(ob.server || '').trim();
-      const port = Number(ob.server_port || 443);
+
+      const peersArr = Array.isArray(item.peers)
+        ? (item.peers as Array<Record<string, unknown>>)
+        : undefined;
+      const firstPeer = peersArr && peersArr.length > 0 ? peersArr[0] : undefined;
+
+      const server = String(
+        item.server || firstPeer?.address || firstPeer?.server || ''
+      ).trim();
+      const port = Number(
+        item.server_port ||
+          firstPeer?.port ||
+          firstPeer?.server_port ||
+          (type === 'wireguard' ? 51820 : 443)
+      );
       if (!isValidHost(server) || !isValidPort(port)) continue;
 
-      const tag = String(ob.tag || `${type.toUpperCase()} ${server}:${port}`);
-      const tlsObj = (ob.tls as Record<string, unknown> | undefined) || undefined;
+      const tag = String(item.tag || `${type.toUpperCase()} ${server}:${port}`);
+      const tlsObj = (item.tls as Record<string, unknown> | undefined) || undefined;
       const realityObj =
         (tlsObj?.reality as Record<string, unknown> | undefined) || undefined;
       const utlsObj = (tlsObj?.utls as Record<string, unknown> | undefined) || undefined;
       const transObj =
-        (ob.transport as Record<string, unknown> | undefined) || undefined;
+        (item.transport as Record<string, unknown> | undefined) || undefined;
+      const transHeaders =
+        (transObj?.headers as Record<string, unknown> | undefined) || undefined;
+      const obfsObj = (item.obfs as Record<string, unknown> | undefined) || undefined;
 
       const tlsMode: TlsSecurity = tlsObj?.enabled
         ? realityObj?.enabled
           ? 'reality'
           : 'tls'
-        : 'none';
+        : type === 'hysteria2' || type === 'tuic'
+          ? 'tls'
+          : 'none';
+
+      const wsHostCandidate =
+        transHeaders?.Host || transHeaders?.host || transObj?.host;
+      const wsHost = Array.isArray(wsHostCandidate)
+        ? wsHostCandidate[0]
+          ? String(wsHostCandidate[0])
+          : undefined
+        : wsHostCandidate
+          ? String(wsHostCandidate)
+          : undefined;
+
+      const alpn = Array.isArray(tlsObj?.alpn)
+        ? tlsObj.alpn.map((a) => String(a).trim()).filter(Boolean)
+        : typeof tlsObj?.alpn === 'string' && tlsObj.alpn.trim()
+          ? tlsObj.alpn
+              .split(',')
+              .map((a) => a.trim())
+              .filter(Boolean)
+          : undefined;
+
+      const rawFlow = item.flow ? String(item.flow).trim() : '';
+      const flow = rawFlow
+        ? rawFlow.toLowerCase().startsWith('xtls-rprx-vision')
+          ? 'xtls-rprx-vision'
+          : rawFlow
+        : undefined;
+
+      const wgLocalAddr = Array.isArray(item.address)
+        ? item.address.map((a) => String(a).trim()).filter(Boolean)
+        : Array.isArray(item.local_address)
+          ? item.local_address.map((a) => String(a).trim()).filter(Boolean)
+          : undefined;
+
+      const wgReservedRaw = firstPeer?.reserved ?? item.reserved;
+      const wgReserved = Array.isArray(wgReservedRaw)
+        ? wgReservedRaw.map((n) => Number(n)).filter((n) => Number.isInteger(n))
+        : typeof wgReservedRaw === 'string'
+          ? parseWireguardReserved(wgReservedRaw)
+          : undefined;
+
+      const mport = Array.isArray(item.server_ports)
+        ? item.server_ports.map((p) => String(p).trim()).filter(Boolean).join(',')
+        : typeof item.server_ports === 'string' && item.server_ports.trim()
+          ? item.server_ports.trim()
+          : undefined;
 
       const node = createBaseNode(
         {
@@ -742,13 +934,20 @@ function tryParseSingboxJsonOutbounds(
           port,
           name: tag,
           subscriptionId,
-          uuid: ob.uuid ? String(ob.uuid) : undefined,
-          password: ob.password ? String(ob.password) : undefined,
-          username: ob.username ? String(ob.username) : undefined,
-          method: ob.method ? String(ob.method) : undefined,
-          flow: ob.flow ? String(ob.flow) : undefined,
+          uuid: item.uuid ? String(item.uuid) : undefined,
+          password: item.password ? String(item.password) : undefined,
+          username: item.username ? String(item.username) : undefined,
+          method: item.method
+            ? String(item.method)
+            : item.security
+              ? String(item.security)
+              : undefined,
+          alterId:
+            typeof item.alter_id === 'number' ? item.alter_id : undefined,
+          flow,
           tls: tlsMode,
           sni: tlsObj?.server_name ? String(tlsObj.server_name) : undefined,
+          alpn,
           allowInsecure: Boolean(tlsObj?.insecure),
           fingerprint: utlsObj?.fingerprint ? String(utlsObj.fingerprint) : undefined,
           realityPublicKey: realityObj?.public_key
@@ -759,9 +958,42 @@ function tryParseSingboxJsonOutbounds(
             ? normalizeTransport(String(transObj.type))
             : undefined,
           wsPath: transObj?.path ? String(transObj.path) : undefined,
+          wsHost,
           grpcServiceName: transObj?.service_name
             ? String(transObj.service_name)
             : undefined,
+          mport,
+          upMbps:
+            item.up_mbps !== undefined && item.up_mbps !== null
+              ? Number(item.up_mbps)
+              : undefined,
+          downMbps:
+            item.down_mbps !== undefined && item.down_mbps !== null
+              ? Number(item.down_mbps)
+              : undefined,
+          obfsType:
+            obfsObj?.type && String(obfsObj.type).toLowerCase() !== 'none'
+              ? String(obfsObj.type)
+              : undefined,
+          obfsPassword: obfsObj?.password ? String(obfsObj.password) : undefined,
+          congestionControl: item.congestion_control
+            ? String(item.congestion_control)
+            : undefined,
+          udpRelayMode: item.udp_relay_mode ? String(item.udp_relay_mode) : undefined,
+          wgPrivateKey: item.private_key ? String(item.private_key) : undefined,
+          wgPublicKey: item.peer_public_key
+            ? String(item.peer_public_key)
+            : firstPeer?.public_key
+              ? String(firstPeer.public_key)
+              : undefined,
+          wgPreSharedKey: item.pre_shared_key
+            ? String(item.pre_shared_key)
+            : firstPeer?.pre_shared_key
+              ? String(firstPeer.pre_shared_key)
+              : undefined,
+          wgLocalAddress: wgLocalAddr,
+          wgMtu: typeof item.mtu === 'number' ? item.mtu : undefined,
+          wgReserved: wgReserved && wgReserved.length === 3 ? wgReserved : undefined,
         },
         prio
       );

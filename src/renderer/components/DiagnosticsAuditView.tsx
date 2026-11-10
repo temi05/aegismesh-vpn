@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import {
+  Bot,
   CheckCircle2,
   Clock,
   Radar,
@@ -23,6 +24,30 @@ export const DiagnosticsAuditView: React.FC<Props> = ({
   const [scanning, setScanning] = useState(false);
   const audit = snapshot.lastAudit;
 
+  const rawSnap = snapshot as VpnStateSnapshot & {
+    activeAiNodeName?: string | null;
+    activeAiCountry?: string | null;
+    aiCompatibleCount?: number;
+  };
+  const aiGatewayEnabled = snapshot.settings?.aiRoutingEnabled !== false;
+  const activeAiNodeName =
+    snapshot.telemetry?.activeAiNodeName ??
+    rawSnap.activeAiNodeName ??
+    snapshot.nodes.find(
+      (n) =>
+        n.id ===
+        (snapshot.telemetry?.activeAiNodeId ||
+          snapshot.settings?.preferredAiNodeId ||
+          snapshot.activeNodeId)
+    )?.name ??
+    null;
+  const activeAiCountry =
+    snapshot.telemetry?.activeAiCountry ?? rawSnap.activeAiCountry ?? null;
+  const aiCompatibleCount =
+    snapshot.telemetry?.aiCompatibleCount ??
+    rawSnap.aiCompatibleCount ??
+    snapshot.nodes.filter((n) => n.enabled && n.aiStatus === 'ok').length;
+
   const handleRunScan = async () => {
     setScanning(true);
     try {
@@ -38,6 +63,74 @@ export const DiagnosticsAuditView: React.FC<Props> = ({
 
   return (
     <div>
+      {/* Диагностический статус Умного шлюза Нейросетей (AI Gateway / proxy-ai) */}
+      <div
+        className="card"
+        style={{
+          marginBottom: 14,
+          border: aiGatewayEnabled
+            ? '1px solid rgba(56, 189, 248, 0.4)'
+            : '1px solid var(--border-subtle)',
+        }}
+      >
+        <div
+          style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 10,
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <Bot size={18} color="#38BDF8" />
+            <div>
+              <div style={{ fontWeight: 700, fontSize: 13.5 }}>
+                AI Gateway (<code>proxy-ai</code>) • Шлюз Нейросетей (Gemini / ChatGPT / Grok)
+              </div>
+              <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>
+                Активный ИИ-сервер:{' '}
+                <strong style={{ color: '#38BDF8' }}>
+                  {activeAiNodeName || 'Автоподбор при подключении'}
+                </strong>
+                {activeAiCountry ? ` (${activeAiCountry})` : ''}
+              </div>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            <span
+              className="badge mono"
+              style={{
+                padding: '4px 10px',
+                background: 'rgba(0, 229, 176, 0.14)',
+                color: 'var(--emerald-shield)',
+                border: '1px solid rgba(0, 229, 176, 0.35)',
+                fontWeight: 700,
+              }}
+            >
+              AI OK: {aiCompatibleCount}
+            </span>
+            <span
+              className="badge mono"
+              style={{
+                padding: '4px 10px',
+                background: aiGatewayEnabled
+                  ? 'rgba(56, 189, 248, 0.16)'
+                  : 'var(--bg-elevated)',
+                color: aiGatewayEnabled ? '#38BDF8' : 'var(--text-secondary)',
+                border: aiGatewayEnabled
+                  ? '1px solid rgba(56, 189, 248, 0.45)'
+                  : '1px solid var(--border-subtle)',
+                fontWeight: 700,
+              }}
+            >
+              {aiGatewayEnabled ? 'ШЛЮЗ ИИ АКТИВЕН' : 'ШЛЮЗ ИИ ВЫКЛ'}
+            </span>
+          </div>
+        </div>
+      </div>
+
       <div className="grid-2">
         {/* Блок сканера утечек IP и DNS */}
         <div className="card">

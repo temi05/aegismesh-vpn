@@ -7,8 +7,8 @@ android {
         applicationId "com.aegismesh.vpn"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 8
-        versionName "3.5.0"
+        versionCode 9
+        versionName "3.6.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -16,8 +16,26 @@ android {
             ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    signingConfigs {
+        aegismesh {
+            if (file("aegismesh-release.keystore").exists()) {
+                storeFile file("aegismesh-release.keystore")
+                storePassword "aegismesh2026"
+                keyAlias "aegismesh"
+                keyPassword "aegismesh2026"
+            }
+        }
+    }
     buildTypes {
+        debug {
+            if (file("aegismesh-release.keystore").exists()) {
+                signingConfig signingConfigs.aegismesh
+            }
+        }
         release {
+            if (file("aegismesh-release.keystore").exists()) {
+                signingConfig signingConfigs.aegismesh
+            }
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }

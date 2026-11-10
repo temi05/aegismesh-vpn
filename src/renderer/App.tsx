@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   KeyRound,
   Lock,
@@ -73,6 +73,8 @@ export const App: React.FC = () => {
   const [toast, setToast] = useState<{ text: string; isError: boolean } | null>(null);
   const [nowTick, setNowTick] = useState<number>(() => Date.now());
   const [busyAction, setBusyAction] = useState(false);
+  const busyRef = useRef(false);
+  busyRef.current = busyAction;
 
   const isMobileApp = isNativeMobileApp();
 
@@ -87,9 +89,10 @@ export const App: React.FC = () => {
     let mounted = true;
 
     const poll = async () => {
+      if (busyRef.current) return;
       try {
         const data = await aegisApi.getState();
-        if (mounted && data && Array.isArray(data.nodes)) {
+        if (mounted && !busyRef.current && data && Array.isArray(data.nodes)) {
           setSnapshot(data);
         }
       } catch {
@@ -100,10 +103,21 @@ export const App: React.FC = () => {
     void poll();
     const timer = window.setInterval(poll, 1800);
     const clockTimer = window.setInterval(() => setNowTick(Date.now()), 1000);
+    const updateTimer = window.setTimeout(() => {
+      aegisApi
+        .checkAppUpdate()
+        .then((r) => {
+          if (mounted && !busyRef.current && r?.snapshot) {
+            setSnapshot(r.snapshot);
+          }
+        })
+        .catch(() => {});
+    }, 2500);
     return () => {
       mounted = false;
       window.clearInterval(timer);
       window.clearInterval(clockTimer);
+      window.clearTimeout(updateTimer);
     };
   }, []);
 
@@ -305,6 +319,14 @@ export const App: React.FC = () => {
           <div className="space-y-3 pt-3 border-t border-outline-variant">
             <div className="p-2.5 rounded bg-surface-container-low border border-outline-variant font-telemetry-sm text-telemetry-sm space-y-1">
               <div className="flex justify-between items-center text-on-surface-variant">
+                <span>{`Версия: v${snapshot.appUpdate?.currentVersion || '3.6.0'}`}</span>
+                <span className="text-primary-container font-mono font-bold">
+                  {snapshot.appUpdate?.updateAvailable
+                    ? `⬆️ v${snapshot.appUpdate.latestVersion}`
+                    : 'OK'}
+                </span>
+              </div>
+              <div className="flex justify-between items-center text-on-surface-variant">
                 <span>Ядро:</span>
                 <span className="text-primary font-mono font-bold truncate max-w-[130px]">
                   {snapshot.coreStatus.version || 'sing-box 1.14'}
@@ -433,6 +455,22 @@ export const App: React.FC = () => {
                   <span>Мини-виджет</span>
                 </>
               )}
+            </button>
+          )}
+
+          {snapshot.appUpdate?.updateAvailable && (
+            <button
+              type="button"
+              onClick={() => {
+                setActiveTab('routing');
+                showToast(
+                  `Доступно обновление AegisMesh VPN v${snapshot.appUpdate?.latestVersion} — откройте Центр обновлений`
+                );
+              }}
+              className="px-2.5 py-1.5 min-h-[36px] rounded bg-primary-container/20 hover:bg-primary-container/30 border border-primary-container text-primary-container shield-glow font-badge-code text-[11px] font-bold flex items-center gap-1 transition-all cursor-pointer"
+              title="Открыть Центр обновлений AegisMesh VPN"
+            >
+              <span>{`⬆️ Обновление v${snapshot.appUpdate.latestVersion}`}</span>
             </button>
           )}
 

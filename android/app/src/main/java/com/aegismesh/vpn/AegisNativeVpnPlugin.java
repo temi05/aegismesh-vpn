@@ -3,13 +3,17 @@ package com.aegismesh.vpn;
 import android.app.Activity;
 import android.content.Intent;
 import android.content.pm.ApplicationInfo;
+import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.net.Network;
+import android.net.Uri;
 import android.net.VpnService;
 import android.os.Build;
+import android.provider.Settings;
 
 import androidx.activity.result.ActivityResult;
+import androidx.core.content.FileProvider;
 
 import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
@@ -20,6 +24,9 @@ import com.getcapacitor.annotation.ActivityCallback;
 import com.getcapacitor.annotation.CapacitorPlugin;
 
 import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
@@ -30,6 +37,7 @@ import java.net.Proxy;
 import java.net.Socket;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -52,6 +60,13 @@ import java.util.concurrent.Future;
 @CapacitorPlugin(name = "AegisNativeVpn")
 public class AegisNativeVpnPlugin extends Plugin {
     private final ExecutorService ioPool = Executors.newCachedThreadPool();
+
+    private static volatile boolean sUpdateDownloading = false;
+    private static volatile int sUpdateProgressPercent = 0;
+    private static volatile long sUpdateDownloadedBytes = 0;
+    private static volatile long sUpdateTotalBytes = 0;
+    private static volatile String sUpdateStatusMessage = "idle";
+    private static volatile String sUpdateLastSha256 = "";
 
     @PluginMethod
     public void startVpn(PluginCall call) {
@@ -243,6 +258,24 @@ public class AegisNativeVpnPlugin extends Plugin {
         res.put("txBytes", stats[1]);
         res.put("rxPackets", stats[2]);
         res.put("rxBytes", stats[3]);
+        String appVersionName = "3.6.0";
+        int appVersionCode = 9;
+        try {
+            PackageInfo pInfo = getContext().getPackageManager().getPackageInfo(getContext().getPackageName(), 0);
+            if (pInfo != null) {
+                if (pInfo.versionName != null && !pInfo.versionName.isEmpty()) {
+                    appVersionName = pInfo.versionName;
+                }
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                    appVersionCode = (int) pInfo.getLongVersionCode();
+                } else {
+                    appVersionCode = pInfo.versionCode;
+                }
+            }
+        } catch (Exception ignored) {
+        }
+        res.put("appVersionName", appVersionName);
+        res.put("appVersionCode", appVersionCode);
         call.resolve(res);
     }
 
@@ -633,5 +666,246 @@ public class AegisNativeVpnPlugin extends Plugin {
             res.put("apps", arr);
             call.resolve(res);
         });
+    }
+
+    @PluginMethod
+    public void getUpdateInstallStatus(PluginCall call) {
+        String appVersionName = "3.6.0";
+        int appVersionCode = 9;
+        try {
+            PackageInfo pInfo = getContext().getPackageManager().getPackageInfo(getContext().getPackageName(), 0);
+            if (pInfo != null) {
+                if (pInfo.versionName != null && !pInfo.versionName.isEmpty()) {
+                    appVersionName = pInfo.versionName;
+                }
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                    appVersionCode = (int) pInfo.getLongVersionCode();
+                } else {
+                    appVersionCode = pInfo.versionCode;
+                }
+            }
+        } catch (Exception ignored) {
+        }
+
+        boolean canInstall = Build.VERSION.SDK_INT < Build.VERSION_CODES.O
+                || getContext().getPackageManager().canRequestPackageInstalls();
+
+        JSObject res = new JSObject();
+        res.put("downloading", sUpdateDownloading);
+        res.put("progressPercent", sUpdateProgressPercent);
+        res.put("downloadedBytes", sUpdateDownloadedBytes);
+        res.put("totalBytes", sUpdateTotalBytes);
+        res.put("statusMessage", sUpdateStatusMessage);
+        res.put("sha256", sUpdateLastSha256);
+        res.put("canInstallPackages", canInstall);
+        res.put("appVersionName", appVersionName);
+        res.put("appVersionCode", appVersionCode);
+        call.resolve(res);
+    }
+
+    @PluginMethod
+    public void downloadAndInstallApk(PluginCall call) {
+        final String url = call.getString("url", "");
+        if (url == null || (!url.startsWith("http://") && !url.startsWith("https://"))) {
+            call.reject("Некорректный URL для загрузки APK-обновления");
+            return;
+        }
+
+        ioPool.execute(() -> {
+            sUpdateDownloading = true;
+            sUpdateProgressPercent = 5;
+            sUpdateDownloadedBytes = 0;
+            sUpdateTotalBytes = 0;
+            sUpdateStatusMessage = "Скачивание обновления AegisMesh-VPN.apk...";
+
+            File cacheDir = getContext().getCacheDir();
+            File destPart = new File(cacheDir, "AegisMesh-VPN-update.apk.part");
+            File finalApkFile = new File(cacheDir, "AegisMesh-VPN-update.apk");
+
+            try {
+                if (destPart.exists()) {
+                    destPart.delete();
+                }
+
+                String sha256 = downloadApkWithFallback(url.trim(), destPart);
+                sUpdateLastSha256 = sha256;
+
+                if (finalApkFile.exists()) {
+                    finalApkFile.delete();
+                }
+                if (!destPart.renameTo(finalApkFile)) {
+                    try (FileInputStream in = new FileInputStream(destPart);
+                         FileOutputStream out = new FileOutputStream(finalApkFile)) {
+                        byte[] copyBuf = new byte[16384];
+                        int n;
+                        while ((n = in.read(copyBuf)) != -1) {
+                            out.write(copyBuf, 0, n);
+                        }
+                    }
+                    destPart.delete();
+                }
+
+                sUpdateDownloading = false;
+                sUpdateProgressPercent = 100;
+
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
+                        && !getContext().getPackageManager().canRequestPackageInstalls()) {
+                    sUpdateStatusMessage = "Разрешите установку обновлений из этого источника";
+                    Intent manageIntent = new Intent(
+                            Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+                            Uri.parse("package:" + getContext().getPackageName())
+                    );
+                    manageIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                    getContext().startActivity(manageIntent);
+
+                    JSObject ret = new JSObject();
+                    ret.put("started", true);
+                    ret.put("installedIntentLaunched", false);
+                    ret.put("needsInstallPermission", true);
+                    ret.put("filePath", finalApkFile.getAbsolutePath());
+                    ret.put("sizeBytes", finalApkFile.length());
+                    ret.put("sha256", sha256);
+                    call.resolve(ret);
+                    return;
+                }
+
+                sUpdateStatusMessage = "Запуск системного установщика Android...";
+                Uri apkUri = FileProvider.getUriForFile(
+                        getContext(),
+                        getContext().getPackageName() + ".fileprovider",
+                        finalApkFile
+                );
+                Intent installIntent = new Intent(Intent.ACTION_VIEW);
+                installIntent.setDataAndType(apkUri, "application/vnd.android.package-archive");
+                installIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                installIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                getContext().startActivity(installIntent);
+
+                sUpdateStatusMessage = "Пакет обновления передан установщику Android";
+                JSObject ret = new JSObject();
+                ret.put("started", true);
+                ret.put("installedIntentLaunched", true);
+                ret.put("needsInstallPermission", false);
+                ret.put("sha256", sha256);
+                ret.put("sizeBytes", finalApkFile.length());
+                ret.put("filePath", finalApkFile.getAbsolutePath());
+                call.resolve(ret);
+            } catch (Exception e) {
+                sUpdateDownloading = false;
+                sUpdateStatusMessage = "Ошибка загрузки обновления: " + e.getMessage();
+                call.reject("Не удалось скачать или запустить обновление APK: " + e.getMessage());
+            }
+        });
+    }
+
+    private String downloadApkWithFallback(String urlStr, File destPart) throws Exception {
+        if (AegisVpnService.isVpnRunning()) {
+            try {
+                Proxy tunnelProxy = new Proxy(
+                        Proxy.Type.HTTP,
+                        new InetSocketAddress("127.0.0.1", AegisVpnService.LOCAL_MIXED_PORT)
+                );
+                return downloadApkViaProxy(urlStr, destPart, tunnelProxy);
+            } catch (Exception ignored) {
+                if (destPart.exists()) {
+                    destPart.delete();
+                }
+                sUpdateDownloadedBytes = 0;
+                sUpdateTotalBytes = 0;
+                sUpdateProgressPercent = 5;
+            }
+        }
+        return downloadApkViaProxy(urlStr, destPart, Proxy.NO_PROXY);
+    }
+
+    private String downloadApkViaProxy(String initialUrl, File destPart, Proxy proxy) throws Exception {
+        String currentUrl = initialUrl;
+        for (int redirectCount = 0; redirectCount <= 6; redirectCount++) {
+            HttpURLConnection conn = null;
+            try {
+                URL url = new URL(currentUrl);
+                conn = (HttpURLConnection) (proxy != null && proxy != Proxy.NO_PROXY
+                        ? url.openConnection(proxy)
+                        : url.openConnection(Proxy.NO_PROXY));
+                conn.setRequestMethod("GET");
+                conn.setInstanceFollowRedirects(false);
+                conn.setConnectTimeout(15000);
+                conn.setReadTimeout(30000);
+                conn.setRequestProperty("User-Agent", "AegisMesh-VPN-Updater/3.6.0 (Android)");
+                conn.setRequestProperty("Accept", "application/vnd.android.package-archive, application/octet-stream, */*");
+
+                int status = conn.getResponseCode();
+                if (status == 301 || status == 302 || status == 303 || status == 307 || status == 308) {
+                    String location = conn.getHeaderField("Location");
+                    conn.disconnect();
+                    if (location == null || location.trim().isEmpty()) {
+                        throw new Exception("Пустой заголовок Location при перенаправлении HTTP " + status);
+                    }
+                    currentUrl = new URL(url, location.trim()).toString();
+                    continue;
+                }
+
+                if (status < 200 || status >= 300) {
+                    throw new Exception("Сервер обновлений вернул HTTP " + status);
+                }
+
+                long totalLen = conn.getContentLengthLong();
+                sUpdateTotalBytes = totalLen > 0 ? totalLen : 0L;
+                sUpdateDownloadedBytes = 0L;
+
+                MessageDigest digest = MessageDigest.getInstance("SHA-256");
+                try (InputStream in = conn.getInputStream();
+                     FileOutputStream out = new FileOutputStream(destPart)) {
+                    byte[] buf = new byte[16384];
+                    int read;
+                    while ((read = in.read(buf)) != -1) {
+                        out.write(buf, 0, read);
+                        digest.update(buf, 0, read);
+                        sUpdateDownloadedBytes += read;
+                        if (sUpdateTotalBytes > 0) {
+                            int pct = 5 + (int) ((sUpdateDownloadedBytes * 90L) / sUpdateTotalBytes);
+                            sUpdateProgressPercent = Math.max(5, Math.min(95, pct));
+                        } else {
+                            int pct = 10 + (int) (sUpdateDownloadedBytes / (512L * 1024L));
+                            sUpdateProgressPercent = Math.max(10, Math.min(90, pct));
+                        }
+                        sUpdateStatusMessage = String.format(
+                                Locale.ROOT,
+                                "Скачивание обновления: %.1f МБ...",
+                                sUpdateDownloadedBytes / (1024.0 * 1024.0)
+                        );
+                    }
+                    out.flush();
+                }
+
+                if (!destPart.exists() || destPart.length() < 1024L) {
+                    throw new Exception("Скачанный APK слишком мал (" + destPart.length() + " байт)");
+                }
+
+                byte[] magic = new byte[4];
+                try (FileInputStream checkIn = new FileInputStream(destPart)) {
+                    int mRead = checkIn.read(magic);
+                    if (mRead < 4
+                            || magic[0] != 0x50
+                            || magic[1] != 0x4B
+                            || magic[2] != 0x03
+                            || magic[3] != 0x04) {
+                        throw new Exception("Неверная ZIP/APK сигнатура скачанного файла");
+                    }
+                }
+
+                byte[] hashBytes = digest.digest();
+                StringBuilder hex = new StringBuilder(hashBytes.length * 2);
+                for (byte b : hashBytes) {
+                    hex.append(String.format(Locale.ROOT, "%02x", b & 0xff));
+                }
+                return hex.toString();
+            } finally {
+                if (conn != null) {
+                    conn.disconnect();
+                }
+            }
+        }
+        throw new Exception("Превышен лимит HTTP-перенаправлений (6) при скачивании APK");
     }
 }

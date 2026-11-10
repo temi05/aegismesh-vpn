@@ -38,9 +38,66 @@ export const RoutingSecurityView: React.FC<Props> = ({ snapshot, onUpdate, onNot
   const [newDomain, setNewDomain] = useState('');
   const [pinInput, setPinInput] = useState('');
   const [installingCore, setInstallingCore] = useState(false);
+  const [checkingUpdate, setCheckingUpdate] = useState(false);
+  const [installingUpdate, setInstallingUpdate] = useState(false);
   const [showQrExport, setShowQrExport] = useState(false);
   const isMobile = isNativeMobileApp();
   const installedApps = snapshot.installedVpnApps || [];
+  const appUpdate = snapshot.appUpdate;
+  const currentVer = appUpdate?.currentVersion || '3.6.0';
+  const latestVer = appUpdate?.latestVersion || currentVer;
+  const hasUpdate = Boolean(appUpdate?.updateAvailable);
+  const apkSizeMb =
+    appUpdate?.apkSizeBytes && appUpdate.apkSizeBytes > 0
+      ? (appUpdate.apkSizeBytes / (1024 * 1024)).toFixed(1)
+      : null;
+
+  const handleCheckAppUpdate = async () => {
+    if (checkingUpdate) return;
+    setCheckingUpdate(true);
+    try {
+      const res = await aegisApi.checkAppUpdate();
+      if (res?.snapshot) {
+        onUpdate(res.snapshot);
+      }
+      if (res?.update?.updateAvailable) {
+        onNotify(
+          `Доступна новая версия AegisMesh VPN v${res.update.latestVersion} (${res.update.releaseTitle})`
+        );
+      } else {
+        onNotify(`У вас установлена актуальная версия v${res?.update?.currentVersion || '3.6.0'}`);
+      }
+    } catch (err) {
+      onNotify(
+        err instanceof Error ? err.message : 'Ошибка проверки обновлений на GitHub',
+        true
+      );
+    } finally {
+      setCheckingUpdate(false);
+    }
+  };
+
+  const handleInstallAppUpdate = async (targetUrl?: string) => {
+    if (installingUpdate) return;
+    setInstallingUpdate(true);
+    try {
+      const res = await aegisApi.installAppUpdate(targetUrl);
+      if (res?.snapshot) {
+        onUpdate(res.snapshot);
+      }
+      onNotify(
+        res?.update?.statusMessage ||
+          'Запущено скачивание и установка обновления AegisMesh VPN'
+      );
+    } catch (err) {
+      onNotify(
+        err instanceof Error ? err.message : 'Ошибка запуска установки обновления',
+        true
+      );
+    } finally {
+      setInstallingUpdate(false);
+    }
+  };
 
   const patchSettings = async (patch: Partial<AppSettings>, message?: string) => {
     try {
@@ -75,6 +132,199 @@ export const RoutingSecurityView: React.FC<Props> = ({ snapshot, onUpdate, onNot
 
   return (
     <div>
+      {/* Центр обновлений AegisMesh VPN (GitHub Releases + OTA .APK в 1 клик) */}
+      <div
+        className="card"
+        style={{
+          marginBottom: 14,
+          border: hasUpdate
+            ? '1px solid rgba(56, 189, 248, 0.55)'
+            : '1px solid rgba(0, 229, 176, 0.28)',
+        }}
+      >
+        <div className="card-header" style={{ flexWrap: 'wrap', gap: 8 }}>
+          <div className="card-title">
+            <RefreshCw
+              size={18}
+              color={hasUpdate ? '#38BDF8' : 'var(--emerald-shield)'}
+              className={checkingUpdate ? 'animate-spin' : ''}
+            />
+            <span>🔄 Центр обновлений AegisMesh VPN (GitHub Releases)</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            <span
+              className="badge mono"
+              style={{
+                padding: '4px 10px',
+                fontWeight: 700,
+                background: hasUpdate
+                  ? 'rgba(56, 189, 248, 0.16)'
+                  : 'rgba(0, 229, 176, 0.14)',
+                color: hasUpdate ? '#38BDF8' : 'var(--emerald-shield)',
+                border: hasUpdate
+                  ? '1px solid rgba(56, 189, 248, 0.45)'
+                  : '1px solid rgba(0, 229, 176, 0.38)',
+              }}
+            >
+              {hasUpdate
+                ? `Доступна новая версия v${latestVer}`
+                : 'Актуальная версия'}
+            </span>
+            <button
+              type="button"
+              className="btn btn-sm"
+              disabled={checkingUpdate}
+              onClick={() => void handleCheckAppUpdate()}
+            >
+              {checkingUpdate
+                ? '⏳ Проверяем GitHub...'
+                : '🔄 Проверить обновления (GitHub)'}
+            </button>
+          </div>
+        </div>
+
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+            gap: 10,
+            padding: 12,
+            borderRadius: 10,
+            background: 'var(--bg-elevated)',
+            marginBottom: 12,
+          }}
+        >
+          <div>
+            <div style={{ fontSize: 11.5, color: 'var(--text-secondary)' }}>
+              Установленная версия:
+            </div>
+            <div className="mono" style={{ fontWeight: 700, fontSize: 14 }}>
+              v{currentVer}
+            </div>
+          </div>
+          <div>
+            <div style={{ fontSize: 11.5, color: 'var(--text-secondary)' }}>
+              Последний релиз на GitHub:
+            </div>
+            <div
+              className="mono"
+              style={{
+                fontWeight: 700,
+                fontSize: 14,
+                color: hasUpdate ? '#38BDF8' : 'var(--emerald-shield)',
+              }}
+            >
+              v{latestVer}{' '}
+              {appUpdate?.releaseTitle ? `• ${appUpdate.releaseTitle}` : ''}
+            </div>
+          </div>
+          <div>
+            <div style={{ fontSize: 11.5, color: 'var(--text-secondary)' }}>
+              Последняя проверка:
+            </div>
+            <div className="mono" style={{ fontSize: 12.5 }}>
+              {appUpdate?.checkedAt
+                ? new Date(appUpdate.checkedAt).toLocaleTimeString('ru-RU')
+                : 'Только что'}
+            </div>
+          </div>
+        </div>
+
+        {appUpdate?.releaseNotes && (
+          <div
+            style={{
+              padding: 12,
+              borderRadius: 10,
+              background: '#080d16',
+              border: '1px solid var(--border-subtle)',
+              marginBottom: 12,
+            }}
+          >
+            <div
+              style={{
+                fontWeight: 700,
+                fontSize: 12,
+                color: '#38BDF8',
+                marginBottom: 6,
+              }}
+            >
+              📋 Список изменений (Release Notes):
+            </div>
+            <div
+              style={{
+                fontSize: 12,
+                color: 'var(--text-secondary)',
+                whiteSpace: 'pre-wrap',
+                lineHeight: 1.45,
+              }}
+            >
+              {appUpdate.releaseNotes}
+            </div>
+          </div>
+        )}
+
+        {appUpdate?.statusMessage && (
+          <div
+            style={{
+              padding: '8px 12px',
+              borderRadius: 8,
+              background: 'rgba(0, 229, 176, 0.1)',
+              border: '1px solid rgba(0, 229, 176, 0.35)',
+              color: 'var(--emerald-shield)',
+              fontSize: 12,
+              marginBottom: 10,
+            }}
+          >
+            {appUpdate.statusMessage}
+          </div>
+        )}
+
+        {appUpdate?.error && (
+          <div
+            style={{
+              padding: '8px 12px',
+              borderRadius: 8,
+              background: 'rgba(255, 176, 32, 0.1)',
+              border: '1px solid rgba(255, 176, 32, 0.35)',
+              color: 'var(--amber-failover)',
+              fontSize: 12,
+              marginBottom: 10,
+            }}
+          >
+            ⚠️ {appUpdate.error}
+          </div>
+        )}
+
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
+          <button
+            type="button"
+            className="btn btn-primary btn-sm"
+            disabled={installingUpdate}
+            onClick={() => void handleInstallAppUpdate()}
+          >
+            <Download size={14} />{' '}
+            {installingUpdate
+              ? 'Подготовка пакета обновления...'
+              : `📲 Скачать и установить .APK в 1 клик${apkSizeMb ? ` (${apkSizeMb} МБ)` : ''}`}
+          </button>
+
+          {!isMobile && (
+            <button
+              type="button"
+              className="btn btn-sm"
+              disabled={installingUpdate}
+              onClick={() =>
+                void handleInstallAppUpdate(
+                  appUpdate?.desktopDownloadUrl || appUpdate?.htmlUrl || undefined
+                )
+              }
+            >
+              <ExternalLink size={14} /> ⬇️ Скачать обновление с GitHub
+            </button>
+          )}
+        </div>
+      </div>
+
       <div className="grid-2">
         {/* Настройки Auto-Failover и Kill Switch */}
         <div className="card">

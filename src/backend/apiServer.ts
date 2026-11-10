@@ -359,6 +359,28 @@ export class LocalApiServer {
           this.sendJson(res, 200, await this.engine.installSingboxCore());
           return;
         }
+        if (pathname === '/api/update/check' && req.method === 'POST') {
+          const b = await this.readJsonBody<{ mockReleasePayload?: unknown }>(req);
+          const update = await this.engine.checkAppUpdate(b.mockReleasePayload);
+          this.sendJson(res, 200, {
+            ok: true,
+            update,
+            snapshot: this.engine.getSnapshot(),
+          });
+          return;
+        }
+        if (pathname === '/api/update/install' && req.method === 'POST') {
+          const b = await this.readJsonBody<{ url?: string }>(req);
+          const update = await this.engine.triggerAppUpdateInstall(
+            typeof b.url === 'string' ? b.url : undefined
+          );
+          this.sendJson(res, 200, {
+            ok: true,
+            update,
+            snapshot: this.engine.getSnapshot(),
+          });
+          return;
+        }
 
         this.sendJson(res, 404, { error: 'Неизвестный API маршрут' });
       } catch (err) {

@@ -1351,3 +1351,824 @@ describe('12. AegisMesh VPN v3.5 «Адский стресс-стенд»: 240 �
     expect(massRecovered).toBe(240);
   });
 });
+
+describe('13. AegisMesh VPN v3.6: Крипто-целостность SecureVault (AES-256-GCM tamper detection, lock/unlock и санитизация диска)', () => {
+  it('детектирует искажение байтов ciphertextBase64/authTagHex, блокирует запись при lock() и очищает диск от 0.0.0.0:1 / мостов / тестового стенда', () => {
+    // 1. Tamper detection: переворот байта в ciphertextBase64 и authTagHex внутри vault.enc.json
+    const dirCipher = makeTempDir('aegis-vault-tamper-ct-');
+    const vaultCipher = new SecureVault(dirCipher);
+    const parsedReal = parseVpnImportPayload(
+      'vless://11111111-2222-3333-4444-555555555555@nl-vault.example.com:443?security=reality&pbk=PK123&sni=yahoo.com#🇳🇱 NL Vault'
+    );
+    const baseData = vaultCipher.getDefaultData();
+    baseData.nodes = parsedReal.nodes;
+    vaultCipher.save(baseData);
+
+    const encFileCipher = path.join(dirCipher, 'vault.enc.json');
+    const rawEnvCipher = JSON.parse(fs.readFileSync(encFileCipher, 'utf-8')) as {
+      ciphertextBase64: string;
+      authTagHex: string;
+    };
+    const ctBuf = Buffer.from(rawEnvCipher.ciphertextBase64, 'base64');
+    ctBuf[0] ^= 0xff;
+    rawEnvCipher.ciphertextBase64 = ctBuf.toString('base64');
+    fs.writeFileSync(encFileCipher, JSON.stringify(rawEnvCipher, null, 2), 'utf-8');
+
+    expect(() => new SecureVault(dirCipher).load()).toThrow(
+      /Неверный PIN-код или повреждена целостность/
+    );
+
+    const dirTag = makeTempDir('aegis-vault-tamper-tag-');
+    const vaultTag = new SecureVault(dirTag);
+    vaultTag.save(baseData);
+    const encFileTag = path.join(dirTag, 'vault.enc.json');
+    const rawEnvTag = JSON.parse(fs.readFileSync(encFileTag, 'utf-8')) as {
+      ciphertextBase64: string;
+      authTagHex: string;
+    };
+    const tagBuf = Buffer.from(rawEnvTag.authTagHex, 'hex');
+    tagBuf[0] ^= 0xff;
+    rawEnvTag.authTagHex = tagBuf.toString('hex');
+    fs.writeFileSync(encFileTag, JSON.stringify(rawEnvTag, null, 2), 'utf-8');
+
+    expect(() => new SecureVault(dirTag).load()).toThrow(
+      /Неверный PIN-код или повреждена целостность/
+    );
+
+    // 2. Runtime lock/unlock и удаление PIN-кода через setPin(null, data)
+    const dirLock = makeTempDir('aegis-vault-lock-');
+    const vaultLock = new SecureVault(dirLock);
+    vaultLock.setPin('9514', baseData);
+    expect(vaultLock.hasPin()).toBe(true);
+    expect(vaultLock.isLocked()).toBe(false);
+
+    vaultLock.lock();
+    expect(vaultLock.isLocked()).toBe(true);
+    expect(() => vaultLock.save(baseData)).toThrow(/сейф заблокирован/);
+    expect(() => vaultLock.load()).toThrow(/VAULT_LOCKED/);
+
+    const unlockedData = vaultLock.unlock('9514');
+    expect(vaultLock.isLocked()).toBe(false);
+    expect(unlockedData.nodes).toHaveLength(1);
+
+    vaultLock.setPin(null, unlockedData);
+    expect(vaultLock.hasPin()).toBe(false);
+    expect(vaultLock.isLocked()).toBe(false);
+    const reloadedNoPin = new SecureVault(dirLock);
+    expect(reloadedNoPin.hasPin()).toBe(false);
+    expect(reloadedNoPin.load().nodes).toHaveLength(1);
+
+    // 3. Санитизация диска: фильтрация isTestStand, isExternalClientBridge и 0.0.0.0:1 + сброс статуса в 'idle' и consecutiveFailures: 0
+    const dirSanitize = makeTempDir('aegis-vault-sanitize-');
+    const vaultSanitize = new SecureVault(dirSanitize);
+    const realNode = {
+      ...parsedReal.nodes[0],
+      status: 'quarantined' as const,
+      consecutiveFailures: 4,
+      quarantinedUntil: Date.now() + 60_000,
+    };
+    const testStandNode = {
+      ...parsedReal.nodes[0],
+      id: 'test_node_1',
+      name: 'Test Stand #1',
+      isTestStand: true,
+    };
+    const bridgeNode = {
+      ...parsedReal.nodes[0],
+      id: 'bridge_happ',
+      name: 'Happ Local Bridge',
+      server: '127.0.0.1',
+      port: 10808,
+      isExternalClientBridge: true,
+    };
+    const dummyNode = {
+      ...parsedReal.nodes[0],
+      id: 'dummy_0',
+      name: '❌ Инфо-заглушка',
+      server: '0.0.0.0',
+      port: 1,
+      uuid: '00000000-0000-0000-0000-000000000000',
+    };
+
+    const dirtyData = vaultSanitize.getDefaultData();
+    dirtyData.nodes = [realNode, testStandNode, bridgeNode, dummyNode];
+    vaultSanitize.save(dirtyData);
+
+    const cleanReloaded = new SecureVault(dirSanitize).load();
+    expect(cleanReloaded.nodes).toHaveLength(1);
+    expect(cleanReloaded.nodes[0].id).toBe(realNode.id);
+    expect(cleanReloaded.nodes[0].status).toBe('idle');
+    expect(cleanReloaded.nodes[0].consecutiveFailures).toBe(0);
+    expect(cleanReloaded.nodes[0].quarantinedUntil).toBeNull();
+  });
+});
+
+describe('14. AegisMesh VPN v3.6: Матрица GuardProxy (CONNECT Kill Switch 503 vs Split-Tunnel) и CyberDiagnostics (0–100)', () => {
+  it('точно классифицирует RFC1918/Split-Tunnel хосты, блокирует CONNECT при Kill Switch (503) и рассчитывает индекс кибербезопасности 0–100', async () => {
+    const net = await import('node:net');
+    const { GuardProxy, isPrivateIpAddress, shouldBypassHost } = await import(
+      '../src/backend/guardProxy'
+    );
+    const { runCyberSecurityAudit } = await import('../src/backend/cyberDiagnostics');
+    const { TestStandCluster } = await import('../src/backend/testStandCluster');
+
+    // 1. Проверка isPrivateIpAddress
+    for (const privIp of [
+      '127.0.0.1',
+      '10.0.0.1',
+      '192.168.1.1',
+      '172.16.0.1',
+      '172.31.255.1',
+      'localhost',
+      '::1',
+    ]) {
+      expect(isPrivateIpAddress(privIp)).toBe(true);
+    }
+    for (const pubIp of ['172.15.0.1', '172.32.0.1', '8.8.8.8']) {
+      expect(isPrivateIpAddress(pubIp)).toBe(false);
+    }
+
+    // 2. Проверка shouldBypassHost
+    const bypassList = ['*.kaspi.kz', '.gosuslugi.ru', 'sberbank.ru'];
+    expect(shouldBypassHost('kaspi.kz:443', true, bypassList, false)).toBe(true);
+    expect(shouldBypassHost('pay.kaspi.kz', true, bypassList, false)).toBe(true);
+    expect(shouldBypassHost('lk.gosuslugi.ru', true, bypassList, false)).toBe(true);
+    expect(shouldBypassHost('online.sberbank.ru', true, bypassList, false)).toBe(true);
+    expect(shouldBypassHost('evilkaspi.kz', true, bypassList, false)).toBe(false);
+    expect(shouldBypassHost('pay.kaspi.kz', false, bypassList, false)).toBe(false);
+
+    // 3. Проверка GuardProxy HTTP CONNECT при включённом Kill Switch (503 + X-AegisMesh-KillSwitch: ENGAGED)
+    const guard = new GuardProxy();
+    const boundPort = await guard.start(0, false);
+    try {
+      guard.setRoutingPolicy({
+        upstream: null,
+        killSwitchBlocking: true,
+        splitTunnelingEnabled: true,
+        bypassDomains: ['kaspi.kz'],
+        bypassPrivateLan: true,
+      });
+
+      const rawResponse = await new Promise<string>((resolve, reject) => {
+        const sock = net.connect(boundPort, '127.0.0.1', () => {
+          sock.write(
+            'CONNECT blocked.example.com:443 HTTP/1.1\r\nHost: blocked.example.com:443\r\n\r\n'
+          );
+        });
+        let acc = '';
+        sock.on('data', (chunk) => {
+          acc += chunk.toString('utf-8');
+        });
+        sock.on('end', () => resolve(acc));
+        sock.on('close', () => resolve(acc));
+        sock.on('error', reject);
+      });
+
+      expect(rawResponse).toContain('HTTP/1.1 503');
+      expect(rawResponse).toContain('X-AegisMesh-KillSwitch: ENGAGED');
+      expect(guard.getBlockedLeakAttempts()).toBe(1);
+    } finally {
+      await guard.stop();
+    }
+
+    // 4. Проверка runCyberSecurityAudit (отключённое состояние vs полная защита 100/100)
+    const cluster = new TestStandCluster();
+    const standNodes = await cluster.start();
+    const activeProxy = new GuardProxy();
+    const activePort = await activeProxy.start(0, false);
+
+    try {
+      const disconnectedAudit = await runCyberSecurityAudit({
+        isConnected: false,
+        localGuardPort: 0,
+        settings: {
+          ...DEFAULT_APP_SETTINGS,
+          killSwitchEnabled: false,
+        },
+        nodes: [standNodes[0]],
+        vaultHasPin: false,
+        testEchoUrl: cluster.getEchoIdentityUrl(),
+      });
+      expect(disconnectedAudit.ipMasked).toBe(false);
+      expect(disconnectedAudit.securityScore).toBe(20);
+      expect(disconnectedAudit.verdict).toContain('Базовый уровень');
+
+      activeProxy.setRoutingPolicy({
+        upstream: {
+          protocol: 'http',
+          host: standNodes[0].server,
+          port: standNodes[0].port,
+        },
+        killSwitchBlocking: false,
+        splitTunnelingEnabled: true,
+        bypassDomains: DEFAULT_APP_SETTINGS.bypassDomains,
+        bypassPrivateLan: true,
+      });
+
+      const fullAudit = await runCyberSecurityAudit({
+        isConnected: true,
+        localGuardPort: activePort,
+        settings: {
+          ...DEFAULT_APP_SETTINGS,
+          killSwitchEnabled: true,
+        },
+        nodes: standNodes,
+        vaultHasPin: true,
+        testEchoUrl: cluster.getEchoIdentityUrl(),
+      });
+      expect(fullAudit.ipMasked).toBe(true);
+      expect(fullAudit.dnsProtected).toBe(true);
+      expect(fullAudit.killSwitchActive).toBe(true);
+      expect(fullAudit.securityScore).toBe(100);
+      expect(fullAudit.verdict).toContain('Максимальный уровень киберзащиты');
+    } finally {
+      await activeProxy.stop();
+      await cluster.stop();
+    }
+  });
+});
+
+describe('15. AegisMesh VPN v3.6: Бронебойный парсер URI (vmess #@remark, tuic %3A, ss %3D, wg CIDR/reserved, hy2 mport) и Фаззинг (500+ мутаций)', () => {
+  it('разбирает сложные краевые случаи URI/Sing-box 1.12+ и выдерживает 500+ итераций враждебного фаззинга без падений и инъекций', () => {
+    // 1. vmess:// Base64 с символом @ внутри #ремарки (#@MyTelegramVpnChannel)
+    const vmessJsonB64 = Buffer.from(
+      JSON.stringify({
+        v: '2',
+        ps: 'FallbackName',
+        add: 'vmess-edge.example.com',
+        port: 443,
+        id: '11111111-2222-3333-4444-555555555555',
+        net: 'ws',
+        path: '/edge',
+        tls: 'tls',
+      }),
+      'utf-8'
+    ).toString('base64');
+    const vmessEdgeRes = parseVpnImportPayload(
+      `vmess://${vmessJsonB64}#@MyTelegramVpnChannel`
+    );
+    expect(vmessEdgeRes.errors).toEqual([]);
+    expect(vmessEdgeRes.nodes).toHaveLength(1);
+    expect(vmessEdgeRes.nodes[0].protocol).toBe('vmess');
+    expect(vmessEdgeRes.nodes[0].name).toBe('@MyTelegramVpnChannel');
+
+    // 2. tuic:// с URL-кодированным двоеточием %3A между UUID и паролем
+    const tuicEdgeRes = parseVpnImportPayload(
+      'tuic://550e8400-e29b-41d4-a716-446655440000%3AsecretPass123@tuic.example.com:443?congestion_control=bbr#TUIC-Encoded'
+    );
+    expect(tuicEdgeRes.errors).toEqual([]);
+    expect(tuicEdgeRes.nodes).toHaveLength(1);
+    expect(tuicEdgeRes.nodes[0].protocol).toBe('tuic');
+    expect(tuicEdgeRes.nodes[0].uuid).toBe('550e8400-e29b-41d4-a716-446655440000');
+    expect(tuicEdgeRes.nodes[0].password).toBe('secretPass123');
+
+    // 3. ss:// SIP002 с URL-кодированным Base64-паддингом (%3D) и многострочной Base64-подпиской
+    const ssRawCreds = Buffer.from('aes-256-gcm:myPadPass1', 'utf-8').toString('base64'); // заканчивается на '='
+    const ssEncodedCreds = ssRawCreds.replace(/=/g, '%3D');
+    const ssUri = `ss://${ssEncodedCreds}@ss-pad.example.com:8388#SS-Encoded-Pad`;
+    const ssEdgeRes = parseVpnImportPayload(ssUri);
+    expect(ssEdgeRes.errors).toEqual([]);
+    expect(ssEdgeRes.nodes).toHaveLength(1);
+    expect(ssEdgeRes.nodes[0].method).toBe('aes-256-gcm');
+    expect(ssEdgeRes.nodes[0].password).toBe('myPadPass1');
+
+    // Многострочная Base64 подписка с переносами строк каждые 24 символа
+    const fullB64 = Buffer.from(
+      [
+        ssUri,
+        'vless://550e8400-e29b-41d4-a716-446655440000@vless-multi.example.com:443?security=tls#VLESS-Multi',
+      ].join('\n'),
+      'utf-8'
+    ).toString('base64');
+    const multilineB64 = fullB64.match(/.{1,24}/g)!.join('\r\n  ');
+    const multilineRes = parseVpnImportPayload(multilineB64);
+    expect(multilineRes.nodes).toHaveLength(2);
+
+    // 4. wg:// с голым IP (address=10.8.0.2 -> 10.8.0.2/32) и Base64 reserved=AQID ([1, 2, 3]),
+    //    hy2:// с mport=20000-40000 и obfs=none, vless:// с flow=xtls-rprx-vision-udp443
+    const comboRes = parseVpnImportPayload(
+      [
+        'wg://WG_PRIV_KEY@wg.example.com:51820?publickey=WG_PUB_KEY&address=10.8.0.2&reserved=AQID#WG-Normalized',
+        'hy2://hy2secret@hy2.example.com:443?mport=20000-40000&obfs=none&sni=hy2.example.com#HY2-Hopping',
+        'vless://550e8400-e29b-41d4-a716-446655440000@vision.example.com:443?security=reality&pbk=PK1&flow=xtls-rprx-vision-udp443#VLESS-Vision',
+      ].join('\n')
+    );
+    expect(comboRes.errors).toEqual([]);
+    expect(comboRes.nodes).toHaveLength(3);
+    const [wgNode, hy2Node, vlessNode] = comboRes.nodes;
+    expect(wgNode.wgLocalAddress).toEqual(['10.8.0.2/32']);
+    expect(wgNode.wgReserved).toEqual([1, 2, 3]);
+    expect(hy2Node.mport).toBe('20000-40000');
+    expect(hy2Node.obfsType).toBeUndefined();
+    expect(vlessNode.flow).toBe('xtls-rprx-vision');
+
+    // 5. Sing-box 1.12+ JSON с секцией endpoints (type: 'wireguard')
+    const singboxEndpointsJson = JSON.stringify({
+      endpoints: [
+        {
+          type: 'wireguard',
+          tag: '🇳🇱 WireGuard Endpoint 1.12+',
+          address: ['10.9.0.2/32'],
+          private_key: 'WG_EP_PRIV',
+          mtu: 1380,
+          peers: [
+            {
+              address: 'wg-ep.example.com',
+              port: 51820,
+              public_key: 'WG_EP_PUB',
+              reserved: [1, 2, 3],
+            },
+          ],
+        },
+      ],
+    });
+    const epParsed = parseVpnImportPayload(singboxEndpointsJson);
+    expect(epParsed.errors).toEqual([]);
+    expect(epParsed.nodes).toHaveLength(1);
+    expect(epParsed.nodes[0].protocol).toBe('wireguard');
+    expect(epParsed.nodes[0].server).toBe('wg-ep.example.com');
+    expect(epParsed.nodes[0].wgPublicKey).toBe('WG_EP_PUB');
+    expect(epParsed.nodes[0].wgReserved).toEqual([1, 2, 3]);
+
+    // 6. Враждебный фаззинг (520+ мутаций: shell-метасимволы, управляющие байты, битый Base64, мусорные URI)
+    const dangerousChars = [';', '|', '`', '$(whoami)', '&', '<', '>', '\\', '"', "'", '\0', '\r', '\n', ' '];
+    const schemes = ['vless://', 'vmess://', 'ss://', 'trojan://', 'hy2://', 'tuic://', 'wg://', 'socks5://', 'http://', ''];
+
+    let fuzzIterations = 0;
+    for (let i = 0; i < 520; i++) {
+      fuzzIterations += 1;
+      const badChar = dangerousChars[i % dangerousChars.length];
+      const injectedHost = `host-${i}${badChar}evil.example.com`;
+      expect(isValidHost(injectedHost)).toBe(false);
+
+      const scheme = schemes[i % schemes.length];
+      const mutatedPayload = `${scheme}user_${i}:${badChar}@${injectedHost}:${(i * 137) % 70000}/?type=ws&path=%E0%A4%A#${badChar}Remark_${i}`;
+      const res = parseVpnImportPayload(mutatedPayload);
+      expect(Array.isArray(res.nodes)).toBe(true);
+      for (const parsedNode of res.nodes) {
+        expect(isValidHost(parsedNode.server)).toBe(true);
+      }
+    }
+    expect(fuzzIterations).toBeGreaterThanOrEqual(500);
+  });
+});
+
+describe('16. AegisMesh VPN v3.6: Умный Failover v3.6 (изоляция EMA Wi-Fi/LTE, экспоненциальный бэкофф карантина и анти-QUIC Stall)', () => {
+  it('изолирует джиттер при переходе Wi-Fi ➔ LTE, разделяет общие Reality и выделенные LTE-релеи, эскалирует карантин (45➔68➔90➔113➔120с) и уводит трафик с UDP на TCP', async () => {
+    const {
+      buildDiversifiedFailoverBatch,
+      getUnavailableRemainingSec,
+      isDedicatedMobileRelayNode,
+      isMobileCarrierFriendlyNode,
+      markNodeTemporarilyUnavailable,
+      releaseExpiredUnavailableNodes,
+      updateNodeSmartMetrics,
+    } = await import('../src/shared/smartFailover');
+
+    const parsed = parseVpnImportPayload(
+      [
+        'vless://11111111-2222-3333-4444-555555555555@de-generic.example.com:443?security=reality&sni=microsoft.com&pbk=PK1#🇩🇪 Германия #1',
+        'vless://22222222-2222-3333-4444-555555555555@lte-relay.example.com:443?security=reality&sni=yahoo.com&pbk=PK2#🇫🇮 LTE #1 [через РФ]',
+        'hysteria2://pass@nl-udp.example.com:443?sni=nl-udp.example.com#🇳🇱 Нидерланды HY2',
+        'hysteria2://pass@se-udp.example.com:443?sni=se-udp.example.com#🇸🇪 Швеция HY2',
+      ].join('\n')
+    );
+    const [genericDeReality, dedicatedLteFi, nlHy2, seHy2] = parsed.nodes;
+
+    // 1. Изоляция EMA и джиттера при переходе с домашнего Wi-Fi (15 мс) на сотовую сеть LTE (110–112 мс)
+    updateNodeSmartMetrics(genericDeReality, 15, 50000, 'wifi');
+    updateNodeSmartMetrics(genericDeReality, 15, 50000, 'wifi');
+    updateNodeSmartMetrics(genericDeReality, 15, 50000, 'wifi');
+    expect(genericDeReality.wifiEmaLatencyMs).toBe(15);
+    expect(genericDeReality.jitterMs).toBe(0);
+
+    updateNodeSmartMetrics(genericDeReality, 110, 22000, 'cellular');
+    expect(genericDeReality.jitterMs).toBeLessThanOrEqual(15);
+    updateNodeSmartMetrics(genericDeReality, 112, 22000, 'cellular');
+    expect(genericDeReality.jitterMs).toBeLessThanOrEqual(15);
+    expect(genericDeReality.wifiEmaLatencyMs).toBe(15);
+
+    // 2. Разделение isDedicatedMobileRelayNode и isMobileCarrierFriendlyNode
+    expect(isDedicatedMobileRelayNode(genericDeReality)).toBe(false);
+    expect(isMobileCarrierFriendlyNode(genericDeReality)).toBe(true);
+    expect(isDedicatedMobileRelayNode(dedicatedLteFi)).toBe(true);
+    expect(isMobileCarrierFriendlyNode(dedicatedLteFi)).toBe(true);
+
+    // 3. Экспоненциальный бэкофф карантина (45с -> 68с -> 90с -> 113с с потолком 120с) с сохранением consecutiveFailures после истечения таймера
+    let now = 1_000_000;
+    const expectedDurations = [45, 68, 90, 113];
+    for (const expectedSec of expectedDurations) {
+      markNodeTemporarilyUnavailable(dedicatedLteFi, 'Timeout', 45, now, 'cellular');
+      expect(getUnavailableRemainingSec(dedicatedLteFi, now)).toBe(expectedSec);
+      now += expectedSec * 1000 + 1000;
+      const released = releaseExpiredUnavailableNodes([dedicatedLteFi, genericDeReality], now, false);
+      expect(released).toBe(1);
+      expect(dedicatedLteFi.status).toBe('standby');
+    }
+    expect(dedicatedLteFi.consecutiveFailures).toBe(4);
+    // Проверяем жесткий потолок MAX_QUARANTINE_SEC = 120с (при базовом окне 60с: 60 * 2.5 = 150 -> 120с)
+    markNodeTemporarilyUnavailable(dedicatedLteFi, 'Timeout', 60, now, 'cellular');
+    expect(getUnavailableRemainingSec(dedicatedLteFi, now)).toBe(120);
+    now += 121_000;
+    expect(releaseExpiredUnavailableNodes([dedicatedLteFi, genericDeReality], now, false)).toBe(1);
+    expect(dedicatedLteFi.consecutiveFailures).toBe(5);
+
+    // Только реальный успешный ответ сбрасывает consecutiveFailures = 0
+    updateNodeSmartMetrics(dedicatedLteFi, 65, 25000, 'cellular');
+    expect(dedicatedLteFi.consecutiveFailures).toBe(0);
+
+    // 4. Адаптивная эскалация семейства протоколов: при падении UDP-узла (hysteria2) TCP/Reality выдвигается на 1-е место
+    nlHy2.subscriptionId = 'sub_main';
+    seHy2.subscriptionId = 'sub_main';
+    genericDeReality.subscriptionId = 'sub_main';
+    seHy2.smartScore = 96;
+    genericDeReality.smartScore = 82;
+
+    const batchAfterUdpFail = buildDiversifiedFailoverBatch(
+      [nlHy2, seHy2, genericDeReality],
+      nlHy2.id,
+      3,
+      now,
+      false
+    );
+    expect(batchAfterUdpFail[0].id).toBe(genericDeReality.id);
+    expect(batchAfterUdpFail[0].protocol).toBe('vless');
+  });
+});
+
+describe('17. AegisMesh VPN v3.6: Инварианты Sing-box 1.14+ (uTLS Chrome, xudp, WS ALPN, HY2 Port-Hopping, WebRTC AI и автономный QR-профиль)', () => {
+  it('генерирует валидные конфигурации для всех 9 протоколов с uTLS Chrome, xudp, ALPN http/1.1, HY2 server_ports и полным контуром WebRTC для ИИ', async () => {
+    const {
+      collectAiRoutingDomains,
+      evaluateAiProbeResult,
+    } = await import('../src/shared/aiRouting');
+    const { buildAndroidEmbeddedSingboxConfig } = await import(
+      '../src/shared/androidSingboxConfig'
+    );
+
+    const vmessWsB64 = Buffer.from(
+      JSON.stringify({
+        v: '2',
+        ps: 'VMess WS TLS',
+        add: 'vmess-ws.example.com',
+        port: 443,
+        id: '22222222-3333-4444-5555-666666666666',
+        aid: 0,
+        scy: 'auto',
+        net: 'ws',
+        path: '/ws',
+        host: 'vmess-ws.example.com',
+        tls: 'tls',
+        sni: 'vmess-ws.example.com',
+      }),
+      'utf-8'
+    ).toString('base64');
+
+    const nineProtocolsInput = [
+      'vless://11111111-2222-3333-4444-555555555555@vless.example.com:443?security=reality&pbk=PK1&sid=01ab&sni=www.microsoft.com&flow=xtls-rprx-vision#1-VLESS',
+      `vmess://${vmessWsB64}`,
+      'ss://YWVzLTI1Ni1nY206c3NQYXNz@ss.example.com:8388#3-Shadowsocks',
+      'trojan://trojanPass@trojan.example.com:443?security=tls&type=ws&path=/tr-ws&sni=trojan.example.com#4-Trojan',
+      'hysteria2://hy2Pass@hy2.example.com:443?mport=20000-40000&sni=hy2.example.com#5-Hysteria2',
+      'tuic://33333333-4444-5555-6666-777777777777:tuicPass@tuic.example.com:443?congestion_control=bbr#6-TUIC',
+      'wg://WG_PRIV@wg.example.com:51820?publickey=WG_PUB&address=10.8.0.2/32&reserved=1,2,3#7-WireGuard',
+      'socks5://socksUser:socksPass@socks.example.com:1080#8-SOCKS5',
+      'https://httpUser:httpPass@http.example.com:8443#9-HTTPS',
+    ].join('\n');
+
+    const parsed = parseVpnImportPayload(nineProtocolsInput);
+    expect(parsed.errors).toEqual([]);
+    expect(parsed.nodes).toHaveLength(9);
+
+    const desktopCfg = buildDesktopSingboxConfig({
+      nodes: parsed.nodes,
+      activeNodeId: parsed.nodes[0].id,
+      settings: DEFAULT_APP_SETTINGS,
+      internalMixedPort: 20808,
+      clashApiPort: 20810,
+      clashApiSecret: 'sec',
+      enableTun: true,
+    });
+    const androidCfg = buildAndroidEmbeddedSingboxConfig({
+      nodes: parsed.nodes,
+      activeNodeId: parsed.nodes[0].id,
+      settings: DEFAULT_APP_SETTINGS,
+    });
+    const mobileQrCfg = buildMobileAutonomousSingboxProfile(
+      parsed.nodes,
+      DEFAULT_APP_SETTINGS
+    );
+
+    for (const cfg of [desktopCfg, androidCfg]) {
+      const outbounds = cfg.outbounds as Array<Record<string, unknown>>;
+      const endpoints = cfg.endpoints as Array<Record<string, unknown>>;
+      expect(endpoints).toHaveLength(1);
+      expect(endpoints[0].type).toBe('wireguard');
+
+      const vlessOut = outbounds.find((o) => o.type === 'vless')!;
+      expect(vlessOut.packet_encoding).toBe('xudp');
+      expect((vlessOut.tls as Record<string, unknown>).utls).toEqual({
+        enabled: true,
+        fingerprint: 'chrome',
+      });
+
+      const vmessOut = outbounds.find((o) => o.type === 'vmess')!;
+      expect(vmessOut.packet_encoding).toBe('xudp');
+      expect((vmessOut.tls as Record<string, unknown>).alpn).toEqual(['http/1.1']);
+      expect((vmessOut.tls as Record<string, unknown>).utls).toEqual({
+        enabled: true,
+        fingerprint: 'chrome',
+      });
+
+      const trojanOut = outbounds.find((o) => o.type === 'trojan')!;
+      expect((trojanOut.tls as Record<string, unknown>).alpn).toEqual(['http/1.1']);
+
+      const hy2Out = outbounds.find((o) => o.type === 'hysteria2')!;
+      expect(hy2Out.server_ports).toEqual(['20000:40000']);
+      expect(hy2Out.hop_interval).toBe('30s');
+    }
+
+    // Проверка наличия proxy-ai и dns-ai в автономном мобильном QR-профиле
+    const qrOutbounds = mobileQrCfg.outbounds as Array<Record<string, unknown>>;
+    expect(qrOutbounds.some((o) => o.tag === 'proxy-ai' && o.type === 'selector')).toBe(true);
+    const qrDns = mobileQrCfg.dns as { servers: Array<Record<string, unknown>> };
+    expect(qrDns.servers.some((s) => s.tag === 'dns-ai' && s.detour === 'proxy-ai')).toBe(true);
+
+    // Проверка WebRTC / STUN / Voice доменов нейросетей и оценки при выключенном Gemini
+    const aiDomains = collectAiRoutingDomains(DEFAULT_APP_SETTINGS);
+    for (const requiredDomain of [
+      'stun.l.google.com',
+      'ws.chatgpt.com',
+      'webrtc.chatgpt.com',
+      'turn.livekit.cloud',
+      'api.grok.com',
+      'chat.deepseek.com',
+    ]) {
+      expect(aiDomains.exactDomains).toContain(requiredDomain);
+    }
+
+    const chatgptOnlyNode = { ...parsed.nodes[0] };
+    evaluateAiProbeResult(
+      chatgptOnlyNode,
+      {
+        reachable: true,
+        exitCountry: 'NL',
+        googleCountry: 'RU',
+        geminiStatus: 302,
+        geminiLocation: 'https://gemini.google.com/faq',
+        chatgptStatus: 200,
+        grokStatus: 200,
+        latencyMs: 35,
+      },
+      ['chatgpt']
+    );
+    expect(chatgptOnlyNode.aiStatus).toBe('ok');
+    expect(chatgptOnlyNode.aiExitCountry).toBe('NL');
+  });
+});
+
+describe('18. AegisMesh VPN v3.6: Provider Circuit Breaker, Cascade Recovery и защита LocalApiServer / MobileBridge', () => {
+  it('возвращает трафик на основной сервер в режиме cascade_recovery, защищает MobileBridge timing-safe токеном и блокирует Path Traversal в LocalApiServer', async () => {
+    const { MobileBridgeManager } = await import('../src/backend/mobileBridge');
+    const { LocalApiServer } = await import('../src/backend/apiServer');
+
+    const dir = makeTempDir('aegis-cascade-api-');
+    const staticDir = makeTempDir('aegis-static-dist-');
+    fs.writeFileSync(path.join(staticDir, 'index.html'), '<html>AegisMesh UI</html>', 'utf-8');
+
+    const engine = new VpnEngine(dir);
+    const apiServer = new LocalApiServer(engine, staticDir);
+
+    try {
+      // 1. Cascade Recovery на тестовом кластере: #1 падает -> переход на #2 -> #1 оживает -> автовозврат на #1
+      await engine.updateSettings({
+        localProxyPort: 0,
+        failoverMode: 'cascade_recovery',
+        killSwitchEnabled: true,
+      });
+      await engine.startTestStand();
+      const snap1 = await engine.connect();
+      expect(snap1.activeNodeId).toBe('test_node_1');
+
+      const snapFail1 = await engine.setTestNodeOnline('test_node_1', false);
+      expect(snapFail1.activeNodeId).toBe('test_node_2');
+
+      const snapRecovered = await engine.setTestNodeOnline('test_node_1', true);
+      expect(snapRecovered.activeNodeId).toBe('test_node_1');
+      expect(snapRecovered.events.some((e) => e.type === 'primary_restored')).toBe(true);
+
+      // 2. Timing-safe валидация и ротация токена в MobileBridgeManager
+      const bridge = new MobileBridgeManager();
+      const token1 = bridge.getAccessToken();
+      expect(token1).toHaveLength(24);
+      expect(bridge.validateToken(token1)).toBe(true);
+      expect(bridge.validateToken('0'.repeat(token1.length))).toBe(false);
+      expect(bridge.validateToken('short')).toBe(false);
+      expect(bridge.validateToken(null)).toBe(false);
+
+      const token2 = bridge.rotateAccessToken();
+      expect(token2).not.toBe(token1);
+      expect(bridge.validateToken(token1)).toBe(false);
+      expect(bridge.validateToken(token2)).toBe(true);
+
+      // 3. Проверка эндпоинтов LocalApiServer и защиты от Path Traversal
+      const apiPort = await apiServer.start(0);
+      const baseUrl = `http://127.0.0.1:${apiPort}`;
+
+      const stateResp = await fetch(`${baseUrl}/api/state`);
+      expect(stateResp.status).toBe(200);
+      const stateJson = (await stateResp.json()) as { activeNodeId: string };
+      expect(stateJson.activeNodeId).toBe('test_node_1');
+
+      const mobResp = await fetch(`${baseUrl}/api/mobile-info`);
+      expect(mobResp.status).toBe(200);
+      const mobJson = (await mobResp.json()) as { singboxDeepLink: string };
+      expect(mobJson.singboxDeepLink).toContain('sing-box://import-remote-profile');
+
+      const updCheckResp = await fetch(`${baseUrl}/api/update/check`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          mockReleasePayload: {
+            tag_name: 'v3.7.0',
+            name: 'AegisMesh VPN v3.7.0',
+            assets: [
+              {
+                name: 'AegisMesh-VPN.apk',
+                browser_download_url:
+                  'https://github.com/temi05/aegismesh-vpn/releases/download/v3.7.0/AegisMesh-VPN.apk',
+                size: 32500000,
+              },
+            ],
+          },
+        }),
+      });
+      expect(updCheckResp.status).toBe(200);
+      const updCheckJson = (await updCheckResp.json()) as {
+        ok: boolean;
+        update: { updateAvailable: boolean; latestVersion: string };
+      };
+      expect(updCheckJson.ok).toBe(true);
+      expect(updCheckJson.update.updateAvailable).toBe(true);
+      expect(updCheckJson.update.latestVersion).toBe('3.7.0');
+
+      const updInstallResp = await fetch(`${baseUrl}/api/update/install`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          url: 'https://github.com/temi05/aegismesh-vpn/releases/download/v3.7.0/AegisMesh-VPN.apk',
+        }),
+      });
+      expect(updInstallResp.status).toBe(200);
+      const updInstallJson = (await updInstallResp.json()) as {
+        ok: boolean;
+        update: { statusMessage: string };
+      };
+      expect(updInstallJson.ok).toBe(true);
+      expect(updInstallJson.update.statusMessage).toContain('AegisMesh-VPN.apk');
+
+      // Попытка Path Traversal за пределы staticDistDir
+      const traversalResp = await fetch(`${baseUrl}/../../package.json`);
+      const traversalText = await traversalResp.text();
+      expect(traversalText).not.toContain('"devDependencies"');
+    } finally {
+      await apiServer.stop();
+      await engine.shutdown();
+    }
+  });
+});
+
+describe('19. Этап 15.2: In-App Updater (versionUpdater, сравнение Semver и обновление в Mobile/Desktop)', () => {
+  it('корректно сравнивает Semver, разбирает релизы GitHub с APK-ассетами и обрабатывает /api/update/check и /api/update/install в мобильном контроллере', async () => {
+    const {
+      APP_VERSION,
+      compareSemver,
+      isNewerSemver,
+      normalizeSemver,
+      parseGitHubReleasePayload,
+    } = await import('../src/shared/versionUpdater');
+    const { handleMobileStandaloneCall } = await import(
+      '../src/renderer/mobileStandaloneFallback'
+    );
+
+    // 1. Проверка normalizeSemver, compareSemver и isNewerSemver
+    expect(APP_VERSION).toBe('3.6.0');
+    expect(normalizeSemver('v3.6.0')).toBe('3.6.0');
+    expect(normalizeSemver('V4.0.0-beta.1')).toBe('4.0.0');
+    expect(compareSemver('3.5.0', 'v3.6.0')).toBe(-1);
+    expect(compareSemver('3.6.0', '3.6.0')).toBe(0);
+    expect(compareSemver('3.6.0', '3.5.9')).toBe(1);
+    expect(isNewerSemver('3.5.0', 'v3.6.0')).toBe(true);
+    expect(isNewerSemver('3.6.0', '3.6.0')).toBe(false);
+    expect(isNewerSemver('3.6.0', '3.5.9')).toBe(false);
+    expect(isNewerSemver('3.6.0', '4.0.0-beta.1')).toBe(true);
+
+    // 2. Разбор GitHub Release payload с APK-ассетом и фолбэк при пустом списке assets
+    const mockRelease = {
+      tag_name: 'v3.7.0',
+      name: 'AegisMesh VPN v3.7.0 Turbo',
+      body: '- Улучшена работа на LTE\n- Встроенное обновление APK',
+      published_at: '2026-11-10T08:00:00Z',
+      html_url: 'https://github.com/temi05/aegismesh-vpn/releases/tag/v3.7.0',
+      assets: [
+        {
+          name: 'AegisMesh-VPN.apk',
+          browser_download_url:
+            'https://github.com/temi05/aegismesh-vpn/releases/download/v3.7.0/AegisMesh-VPN.apk',
+          size: 32500000,
+        },
+      ],
+    };
+
+    const parsedUpdate = parseGitHubReleasePayload(mockRelease, '3.6.0');
+    expect(parsedUpdate.updateAvailable).toBe(true);
+    expect(parsedUpdate.currentVersion).toBe('3.6.0');
+    expect(parsedUpdate.latestVersion).toBe('3.7.0');
+    expect(parsedUpdate.apkDownloadUrl).toBe(
+      'https://github.com/temi05/aegismesh-vpn/releases/download/v3.7.0/AegisMesh-VPN.apk'
+    );
+    expect(parsedUpdate.apkSizeBytes).toBe(32500000);
+
+    const fallbackRelease = parseGitHubReleasePayload(
+      { tag_name: 'v3.8.0', assets: [] },
+      '3.6.0'
+    );
+    expect(fallbackRelease.updateAvailable).toBe(true);
+    expect(fallbackRelease.apkDownloadUrl).toBe(
+      'https://github.com/temi05/aegismesh-vpn/releases/download/v3.8.0/AegisMesh-VPN.apk'
+    );
+
+    // 3. Проверка мобильного контроллера (/api/update/check и /api/update/install)
+    const checkRes = (await handleMobileStandaloneCall('/api/update/check', {
+      mockReleasePayload: mockRelease,
+    })) as {
+      ok: boolean;
+      update: { updateAvailable: boolean; latestVersion: string; apkDownloadUrl: string };
+    };
+    expect(checkRes.ok).toBe(true);
+    expect(checkRes.update.updateAvailable).toBe(true);
+    expect(checkRes.update.latestVersion).toBe('3.7.0');
+
+    const installUrl =
+      'https://github.com/temi05/aegismesh-vpn/releases/download/v3.7.0/AegisMesh-VPN.apk';
+    const installRes = (await handleMobileStandaloneCall('/api/update/install', {
+      url: installUrl,
+    })) as {
+      ok: boolean;
+      update: { downloadProgress: number; statusMessage: string };
+    };
+    expect(installRes.ok).toBe(true);
+    expect(installRes.update.downloadProgress).toBe(100);
+    expect(installRes.update.statusMessage).toContain(installUrl);
+  });
+});
+
+describe('20. Этап 15.1: Валидация CI/CD (.github/workflows/ci.yml), AndroidManifest.xml и оффлайн-бандла', () => {
+  it('проверяет конвейер GitHub Actions для сборки AegisMesh-VPN.apk, синхронизацию версий 3.6.0, разрешения AndroidManifest и автономность index.html', async () => {
+    const { APP_VERSION } = await import('../src/shared/versionUpdater');
+    const rootDir = path.resolve(__dirname, '..');
+
+    // 1. Проверка .github/workflows/ci.yml
+    const ciPath = path.join(rootDir, '.github', 'workflows', 'ci.yml');
+    expect(fs.existsSync(ciPath)).toBe(true);
+    const ciContent = fs.readFileSync(ciPath, 'utf-8');
+    expect(ciContent).toContain('npm test');
+    expect(ciContent).toContain('ensure:singbox-android');
+    expect(ciContent).toContain('gradlew assembleDebug');
+    expect(ciContent).toContain('AegisMesh-VPN.apk');
+
+    // 2. Проверка scripts/ensure-singbox-android.mjs, package.json и android/app/build.gradle
+    const ensureScriptPath = path.join(rootDir, 'scripts', 'ensure-singbox-android.mjs');
+    expect(fs.existsSync(ensureScriptPath)).toBe(true);
+
+    const pkgJson = JSON.parse(
+      fs.readFileSync(path.join(rootDir, 'package.json'), 'utf-8')
+    ) as { version: string };
+    expect(pkgJson.version).toBe('3.6.0');
+    expect(pkgJson.version).toBe(APP_VERSION);
+
+    const buildGradle = fs.readFileSync(
+      path.join(rootDir, 'android', 'app', 'build.gradle'),
+      'utf-8'
+    );
+    expect(buildGradle).toContain('versionName "3.6.0"');
+    expect(buildGradle).toContain('versionCode 9');
+    expect(buildGradle).toContain('aegismesh-release.keystore');
+
+    // 3. Проверка AndroidManifest.xml (VpnService, REQUEST_INSTALL_PACKAGES, FileProvider)
+    const manifestContent = fs.readFileSync(
+      path.join(rootDir, 'android', 'app', 'src', 'main', 'AndroidManifest.xml'),
+      'utf-8'
+    );
+    expect(manifestContent).toContain('android.permission.BIND_VPN_SERVICE');
+    expect(manifestContent).toContain('android.permission.REQUEST_INSTALL_PACKAGES');
+    expect(manifestContent).toContain('androidx.core.content.FileProvider');
+
+    // 4. Проверка отсутствия внешних блокирующих CDN-скриптов и шрифтов в index.html
+    const indexHtml = fs.readFileSync(path.join(rootDir, 'index.html'), 'utf-8');
+    expect(/<script[^>]+src=["']https?:\/\//i.test(indexHtml)).toBe(false);
+    expect(indexHtml.toLowerCase()).not.toContain('fonts.googleapis.com');
+    expect(indexHtml.toLowerCase()).not.toContain('fonts.gstatic.com');
+  });
+});
+

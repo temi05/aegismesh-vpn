@@ -3,6 +3,7 @@ import crypto from 'node:crypto';
 import EventEmitter from 'node:events';
 import type {
   AppSettings,
+  AppUpdateInfo,
   CyberAuditReport,
   EngineConnectionState,
   ExternalVpnClientBridge,
@@ -12,6 +13,7 @@ import type {
   LiveTunnelTelemetry,
   MobileAccessInfo,
   ParseImportResult,
+  PhysicalNetworkProfile,
   SubscriptionSource,
   VpnNode,
   VpnStateSnapshot,
@@ -45,6 +47,13 @@ import {
   SUBSCRIPTION_COMPAT_PROFILES,
 } from '../shared/subscriptionMeta';
 import { parseVpnImportPayload } from '../shared/uriParser';
+import {
+  APP_VERSION,
+  createDefaultAppUpdateInfo,
+  GITHUB_RELEASES_LATEST_URL,
+  GITHUB_RELEASES_PAGE_URL,
+  parseGitHubReleasePayload,
+} from '../shared/versionUpdater';
 import { BinaryManager } from './binaryManager';
 import { runCyberSecurityAudit } from './cyberDiagnostics';
 import {
@@ -97,6 +106,8 @@ export class VpnEngine extends EventEmitter {
   private manualGroupEnabledInFailover = true;
   private externalClients: ExternalVpnClientBridge[] = createDefaultExternalClientBridges();
   private deviceHwid: string = generateValidHwid();
+  private currentNetworkType: PhysicalNetworkProfile = 'wifi';
+  private appUpdate: AppUpdateInfo | null = createDefaultAppUpdateInfo(APP_VERSION);
   private telemetry: LiveTunnelTelemetry = {
     verified: false,
     exitIp: null,
@@ -120,7 +131,20 @@ export class VpnEngine extends EventEmitter {
 
     this.guardProxy = new GuardProxy({
       onUpstreamFailure: (errMsg) => {
-        void this.handleActiveNodeFailure(`Сбой соединения на прокси-шлюзе: ${errMsg}`);
+        if (this.connectionState !== 'connected' || !this.activeNodeId || this.switchingInProgress) {
+          return;
+        }
+        const active = this.nodes.find((n) => n.id === this.activeNodeId);
+        if (!active) return;
+        if (active.isTestStand && !this.testCluster.isNodeOnline(active.id)) {
+          void this.handleActiveNodeFailure(`Сбой соединения на прокси-шлюзе: ${errMsg}`);
+          return;
+        }
+        void this.probeSingleNode(active).then((rtt) => {
+          if (rtt === null && this.connectionState === 'connected' && this.activeNodeId === active.id) {
+            void this.handleActiveNodeFailure(`Сбой соединения на прокси-шлюзе: ${errMsg}`);
+          }
+        });
       },
     });
 
@@ -278,7 +302,7 @@ export class VpnEngine extends EventEmitter {
       emergencyAppPackage: null,
       telemetry: {
         ...this.telemetry,
-        physicalNetworkType: this.telemetry.physicalNetworkType || 'wifi',
+        physicalNetworkType: this.telemetry.physicalNetworkType || this.currentNetworkType || 'wifi',
         activeMtu: this.telemetry.activeMtu || 1400,
         bestWifiNodeName:
           this.nodes.find((n) => n.id === this.settings.bestWifiNodeId)?.name || null,
@@ -288,6 +312,7 @@ export class VpnEngine extends EventEmitter {
           ? { ...this.telemetry.lastFailoverBanner }
           : null,
       },
+      appUpdate: this.appUpdate ? { ...this.appUpdate } : null,
     };
   }
 
@@ -517,6 +542,13 @@ export class VpnEngine extends EventEmitter {
         );
       }
 
+      const handleSingboxCrash = (crashReason: string) => {
+        this.recordEvent('health_warning', crashReason, node.name);
+        if (this.connectionState === 'connected') {
+          void this.handleActiveNodeFailure(crashReason);
+        }
+      };
+
       if (this.singboxRunner.isRunning()) {
         const switched = await this.singboxRunner.switchActiveOutbound(node.id);
         if (!switched) {
@@ -529,6 +561,7 @@ export class VpnEngine extends EventEmitter {
             enableTun:
               this.settings.connectionMode === 'tun' &&
               this.binaryManager.getStatus().isAdmin,
+            onCrash: handleSingboxCrash,
           });
         }
       } else {
@@ -541,6 +574,7 @@ export class VpnEngine extends EventEmitter {
           enableTun:
             this.settings.connectionMode === 'tun' &&
             this.binaryManager.getStatus().isAdmin,
+          onCrash: handleSingboxCrash,
         });
       }
     }
@@ -634,6 +668,8 @@ export class VpnEngine extends EventEmitter {
 
   // Живая проверка конкретного узла сквозь туннель (включая QUIC/UDP Hysteria2/TUIC/WG через Clash API) или TCP-рукопожатие
   public async probeSingleNode(node: VpnNode): Promise<number | null> {
+    const netProfile: PhysicalNetworkProfile =
+      this.currentNetworkType === 'cellular' ? 'cellular' : 'wifi';
     try {
       if (!this.requiresSingboxBinary(node)) {
         const upstream: UpstreamEndpoint = {
@@ -646,7 +682,7 @@ export class VpnEngine extends EventEmitter {
         const res = await fetchViaUpstream(this.getProbeTargetUrl(), upstream, 3500);
         if (res.statusCode >= 200 && res.statusCode < 400) {
           const rtt = Math.max(1, res.elapsedMs);
-          updateNodeSmartMetrics(node, rtt);
+          updateNodeSmartMetrics(node, rtt, undefined, netProfile);
           node.lastCheckedAt = Date.now();
           node.consecutiveFailures = 0;
           node.quarantinedUntil = null;
@@ -661,7 +697,7 @@ export class VpnEngine extends EventEmitter {
       if (this.singboxRunner.isRunning() && node.enabled && this.isNodeInEnabledSource(node)) {
         const clashRtt = await this.singboxRunner.probeOutboundDelay(node.id, 3500);
         if (clashRtt !== null) {
-          updateNodeSmartMetrics(node, clashRtt);
+          updateNodeSmartMetrics(node, clashRtt, undefined, netProfile);
           node.lastCheckedAt = Date.now();
           node.consecutiveFailures = 0;
           node.quarantinedUntil = null;
@@ -685,7 +721,7 @@ export class VpnEngine extends EventEmitter {
 
       // 3. Для TCP-протоколов замеряем живой TCP RTT до сервера и обновляем Smart Score
       const rtt = await measureTcpLatency(node.server, node.port, 3500);
-      updateNodeSmartMetrics(node, rtt);
+      updateNodeSmartMetrics(node, rtt, undefined, netProfile);
       node.lastCheckedAt = Date.now();
       node.consecutiveFailures = 0;
       node.quarantinedUntil = null;
@@ -693,13 +729,15 @@ export class VpnEngine extends EventEmitter {
       node.lastError = undefined;
       return rtt;
     } catch (err) {
-      updateNodeSmartMetrics(node, null);
+      updateNodeSmartMetrics(node, null, undefined, netProfile);
       const errMsg = err instanceof Error ? err.message : 'Узел временно недоступен';
       if (node.id !== this.activeNodeId) {
         markNodeTemporarilyUnavailable(
           node,
           errMsg,
-          this.settings.quarantineDurationSec || 45
+          this.settings.quarantineDurationSec || 45,
+          Date.now(),
+          netProfile
         );
       } else {
         node.latencyMs = null;
@@ -856,14 +894,19 @@ export class VpnEngine extends EventEmitter {
   public async handleActiveNodeFailure(reason: string): Promise<boolean> {
     if (this.switchingInProgress || !this.activeNodeId) return false;
     this.switchingInProgress = true;
+    const netProfile: PhysicalNetworkProfile =
+      this.currentNetworkType === 'cellular' ? 'cellular' : 'wifi';
 
     try {
       const failedNode = this.nodes.find((n) => n.id === this.activeNodeId);
       if (failedNode) {
-        failedNode.status = 'quarantined';
-        failedNode.latencyMs = null;
-        failedNode.quarantinedUntil =
-          Date.now() + this.settings.quarantineDurationSec * 1000;
+        markNodeTemporarilyUnavailable(
+          failedNode,
+          reason,
+          this.settings.quarantineDurationSec || 45,
+          Date.now(),
+          netProfile
+        );
       }
 
       this.connectionState = 'switching';
@@ -885,7 +928,13 @@ export class VpnEngine extends EventEmitter {
       const eligiblePool = this.nodes.filter(
         (n) => n.enabled && n.id !== failedNode?.id && this.isNodeInEnabledSource(n)
       );
-      const raceBatch = buildDiversifiedFailoverBatch(eligiblePool, failedNode?.id, 8);
+      const raceBatch = buildDiversifiedFailoverBatch(
+        eligiblePool,
+        failedNode?.id,
+        8,
+        Date.now(),
+        netProfile === 'cellular'
+      );
       await Promise.all(raceBatch.map((n) => this.probeSingleNode(n)));
 
       // Если у упавшего провайдера сработал отказ — запускаем фоновое самоисцеление подписки (Self-Healing Refresh)
@@ -1348,14 +1397,34 @@ export class VpnEngine extends EventEmitter {
     return this.getSnapshot();
   }
 
+  private getAiSettingsSignature(s: AppSettings): string {
+    const extra = s as unknown as Record<string, unknown>;
+    return JSON.stringify({
+      aiRoutingEnabled: s.aiRoutingEnabled !== false,
+      aiRoutingMode: s.aiRoutingMode || 'parallel_ai_tunnel',
+      aiServices: Array.isArray(s.aiServices) ? [...s.aiServices].sort() : [],
+      aiCustomDomains: Array.isArray(s.aiCustomDomains) ? [...s.aiCustomDomains].sort() : [],
+      aiIncludeGoogleAccountSession: s.aiIncludeGoogleAccountSession !== false,
+      aiIncludeXForGrok: Boolean(s.aiIncludeXForGrok),
+      preferredAiNodeId: s.preferredAiNodeId ?? null,
+      aiStickyServer: extra.aiStickyServer ?? null,
+      aiPreferCleanCountry: extra.aiPreferCleanCountry ?? null,
+    });
+  }
+
   public async updateSettings(patch: Partial<AppSettings>): Promise<VpnStateSnapshot> {
+    const prevAiSig = this.getAiSettingsSignature(this.settings);
     this.settings = {
       ...this.settings,
       ...patch,
       bypassDomains: patch.bypassDomains
         ? patch.bypassDomains.map((d) => d.trim()).filter(Boolean)
         : this.settings.bypassDomains,
+      aiCustomDomains: patch.aiCustomDomains
+        ? patch.aiCustomDomains.map((d) => d.trim()).filter(Boolean)
+        : this.settings.aiCustomDomains,
     };
+    const nextAiSig = this.getAiSettingsSignature(this.settings);
     this.saveToVaultSafe();
 
     if (this.guardProxy.isRunning()) {
@@ -1379,6 +1448,9 @@ export class VpnEngine extends EventEmitter {
         );
       } else {
         this.winProxy.disable();
+      }
+      if (prevAiSig !== nextAiSig) {
+        await this.syncStickyAiGateway('Обновлены настройки Шлюза Нейросетей');
       }
     }
 
@@ -1583,7 +1655,16 @@ export class VpnEngine extends EventEmitter {
     return this.nodes.filter((n) => n.enabled && this.isNodeInEnabledSource(n));
   }
 
-  private async syncStickyAiGateway(explicitNode?: VpnNode | null): Promise<VpnNode | null> {
+  private async syncStickyAiGateway(
+    explicitNodeOrReason?: VpnNode | string | null
+  ): Promise<VpnNode | null> {
+    const explicitNode =
+      explicitNodeOrReason && typeof explicitNodeOrReason === 'object'
+        ? explicitNodeOrReason
+        : null;
+    const reasonLabel =
+      typeof explicitNodeOrReason === 'string' ? explicitNodeOrReason : null;
+
     const enabledPool = this.getAiCandidatePool();
     this.telemetry.aiCompatibleCount = enabledPool.filter((n) => n.aiStatus === 'ok').length;
 
@@ -1592,6 +1673,9 @@ export class VpnEngine extends EventEmitter {
       this.telemetry.activeAiNodeId = null;
       this.telemetry.activeAiNodeName = null;
       this.telemetry.activeAiCountry = null;
+      if (this.singboxRunner.isRunning() && this.activeNodeId) {
+        await this.singboxRunner.switchSelectorOutbound('proxy-ai', this.activeNodeId);
+      }
       return null;
     }
 
@@ -1613,6 +1697,16 @@ export class VpnEngine extends EventEmitter {
 
     if (this.singboxRunner.isRunning()) {
       await this.singboxRunner.switchSelectorOutbound('proxy-ai', chosen.id);
+    }
+
+    if (reasonLabel) {
+      this.recordEvent(
+        'security',
+        `🤖 ${reasonLabel}: активен ИИ-узел «${chosen.name}»`,
+        undefined,
+        chosen.name,
+        chosen.latencyMs
+      );
     }
 
     return chosen;
@@ -1778,6 +1872,87 @@ export class VpnEngine extends EventEmitter {
     this.saveToVaultSafe();
     this.emitState();
     return this.getSnapshot();
+  }
+
+  public async checkAppUpdate(customReleasePayload?: unknown): Promise<AppUpdateInfo> {
+    if (customReleasePayload !== undefined && customReleasePayload !== null) {
+      this.appUpdate = parseGitHubReleasePayload(customReleasePayload, APP_VERSION);
+      this.emitState();
+      return this.appUpdate;
+    }
+
+    const headers: Record<string, string> = {
+      Accept: 'application/vnd.github+json',
+      'User-Agent': `AegisMesh-VPN/${APP_VERSION}`,
+    };
+
+    try {
+      let rawBody: string | null = null;
+      if (this.connectionState === 'connected' && this.guardProxy.getBoundPort() > 0) {
+        try {
+          const viaProxy = await fetchViaUpstream(
+            GITHUB_RELEASES_LATEST_URL,
+            {
+              protocol: 'http',
+              host: '127.0.0.1',
+              port: this.guardProxy.getBoundPort(),
+            },
+            7000
+          );
+          if (viaProxy.statusCode >= 200 && viaProxy.statusCode < 300 && viaProxy.body.trim()) {
+            rawBody = viaProxy.body;
+          }
+        } catch {
+          // Фолбэк на прямой запрос
+        }
+      }
+
+      if (!rawBody) {
+        const directRes = await fetchDirectWithHeaders(
+          GITHUB_RELEASES_LATEST_URL,
+          headers,
+          8000
+        );
+        if (directRes.statusCode < 200 || directRes.statusCode >= 300) {
+          throw new Error(`GitHub API вернул HTTP ${directRes.statusCode}`);
+        }
+        rawBody = directRes.body;
+      }
+
+      const parsedJson = JSON.parse(rawBody) as unknown;
+      this.appUpdate = parseGitHubReleasePayload(parsedJson, APP_VERSION);
+    } catch (err) {
+      const errMsg =
+        err instanceof Error ? err.message : 'Не удалось проверить наличие обновлений';
+      this.appUpdate = {
+        ...(this.appUpdate ?? createDefaultAppUpdateInfo(APP_VERSION)),
+        checkedAt: Date.now(),
+        error: errMsg,
+      };
+    }
+
+    this.emitState();
+    return this.appUpdate;
+  }
+
+  public async triggerAppUpdateInstall(customUrl?: string): Promise<AppUpdateInfo> {
+    const targetUrl =
+      (customUrl && customUrl.trim()) ||
+      this.appUpdate?.desktopDownloadUrl ||
+      this.appUpdate?.apkDownloadUrl ||
+      this.appUpdate?.htmlUrl ||
+      GITHUB_RELEASES_PAGE_URL;
+
+    this.appUpdate = {
+      ...(this.appUpdate ?? createDefaultAppUpdateInfo(APP_VERSION)),
+      statusMessage: `Открыта страница загрузки обновления: ${targetUrl}`,
+      downloading: false,
+      downloadProgress: 100,
+      error: null,
+    };
+
+    this.emitState();
+    return this.appUpdate;
   }
 
   public async shutdown(): Promise<void> {

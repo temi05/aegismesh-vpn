@@ -139,9 +139,13 @@ function buildTlsBlock(node: VpnNode): Record<string, unknown> | undefined {
 
   if (node.alpn && node.alpn.length > 0) {
     tlsObj.alpn = node.alpn;
+  } else if (node.transport === 'ws' && node.tls === 'tls') {
+    tlsObj.alpn = ['http/1.1'];
+  } else if (node.protocol === 'tuic') {
+    tlsObj.alpn = ['h3'];
   }
 
-  if (node.fingerprint || node.tls === 'reality') {
+  if (node.protocol !== 'hysteria2' && node.protocol !== 'tuic') {
     tlsObj.utls = {
       enabled: true,
       fingerprint: node.fingerprint || 'chrome',
@@ -209,6 +213,7 @@ export function convertNodeToSingboxUnit(
           server: node.server,
           server_port: node.port,
           uuid: node.uuid || '',
+          packet_encoding: 'xudp',
           ...(node.flow ? { flow: node.flow } : {}),
           ...(tls ? { tls } : {}),
           ...(transport ? { transport } : {}),
@@ -226,6 +231,7 @@ export function convertNodeToSingboxUnit(
           uuid: node.uuid || '',
           security: node.method || 'auto',
           alter_id: node.alterId || 0,
+          packet_encoding: 'xudp',
           ...(tls ? { tls } : {}),
           ...(transport ? { transport } : {}),
         },
@@ -258,7 +264,15 @@ export function convertNodeToSingboxUnit(
         },
       };
 
-    case 'hysteria2':
+    case 'hysteria2': {
+      const rawMport = (node.mport || '').trim();
+      const serverPorts = rawMport
+        ? rawMport
+            .split(',')
+            .map((part) => part.trim().replace(/-/g, ':'))
+            .filter(Boolean)
+            .map((part) => (part.includes(':') ? part : `${part}:${part}`))
+        : undefined;
       return {
         kind: 'outbound',
         config: {
@@ -267,6 +281,9 @@ export function convertNodeToSingboxUnit(
           server: node.server,
           server_port: node.port,
           password: node.password || '',
+          ...(serverPorts && serverPorts.length > 0
+            ? { server_ports: serverPorts, hop_interval: '30s' }
+            : {}),
           ...(node.upMbps ? { up_mbps: node.upMbps } : {}),
           ...(node.downMbps ? { down_mbps: node.downMbps } : {}),
           ...(node.obfsType === 'salamander' && node.obfsPassword
@@ -284,6 +301,7 @@ export function convertNodeToSingboxUnit(
           },
         },
       };
+    }
 
     case 'tuic':
       return {
@@ -636,6 +654,7 @@ export function buildDesktopSingboxConfig(
       ],
       rules: dnsRules,
       final: 'dns-remote',
+      strategy: 'prefer_ipv4',
       independent_cache: true,
     },
     ...(endpoints.length > 0 ? { endpoints } : {}),
@@ -666,7 +685,7 @@ export function buildDesktopSingboxConfig(
   };
 }
 
-// Сборка автономного мобильного профиля sing-box 1.12+ (для iOS и Android с встроенным Auto-Failover!)
+// Сборка автономного мобильного профиля sing-box 1.12+ (для iOS и Android с встроенным Auto-Failover и шлюзом Нейросетей proxy-ai!)
 export function buildMobileAutonomousSingboxProfile(
   nodes: VpnNode[],
   settings: AppSettings
@@ -678,10 +697,12 @@ export function buildMobileAutonomousSingboxProfile(
   const outbounds: Array<Record<string, unknown>> = [];
   const endpoints: Array<Record<string, unknown>> = [];
   const tags: string[] = [];
+  const nodeTagMap = new Map<string, string>();
 
   for (const node of usableNodes) {
     const cleanLabel = `${node.priority}. ${node.name}`;
     tags.push(cleanLabel);
+    nodeTagMap.set(node.id, cleanLabel);
     const unit = convertNodeToSingboxUnit(node, cleanLabel);
     if (unit.kind === 'endpoint') {
       endpoints.push(unit.config);
@@ -689,6 +710,29 @@ export function buildMobileAutonomousSingboxProfile(
       outbounds.push(unit.config);
     }
   }
+
+  const chosenAiNode = pickBestStickyAiNode({
+    nodes: usableNodes,
+    preferredAiNodeId: settings.preferredAiNodeId,
+  });
+
+  const foreignAiNodes = usableNodes.filter((n) => {
+    const c = inferCountryHintFromNode(n);
+    return !(c && AI_UNSUPPORTED_COUNTRY_CODES.has(c)) && n.aiStatus !== 'blocked';
+  });
+  const orderedAiSelectorNodes = (foreignAiNodes.length > 0 ? foreignAiNodes : usableNodes)
+    .slice()
+    .sort((a, b) => computeNodeAiRank(b) - computeNodeAiRank(a) || a.priority - b.priority);
+  const cleanAiSelectorTags = orderedAiSelectorNodes
+    .map((n) => nodeTagMap.get(n.id) || `${n.priority}. ${n.name}`);
+  const activeAiTag =
+    (chosenAiNode ? nodeTagMap.get(chosenAiNode.id) : undefined) ||
+    cleanAiSelectorTags[0] ||
+    tags[0] ||
+    'direct';
+  const aiSelectorOutbounds = Array.from(
+    new Set([activeAiTag, ...cleanAiSelectorTags, ...tags])
+  ).filter(Boolean);
 
   const doh = getDohSpec(
     settings.dnsProvider,
@@ -703,6 +747,34 @@ export function buildMobileAutonomousSingboxProfile(
   ];
 
   const dnsRules: Array<Record<string, unknown>> = [];
+
+  const enableAiGateway = settings.aiRoutingEnabled !== false && usableNodes.length > 0;
+  if (enableAiGateway) {
+    routeRules.push({
+      inbound: ['tun-in'],
+      network: ['udp'],
+      port: [443],
+      action: 'reject',
+    });
+
+    const fastMedia = collectFastMediaBypassDomains();
+    if (fastMedia.exactDomains.length > 0 || fastMedia.domainSuffixes.length > 0) {
+      const mediaRule: Record<string, unknown> = {};
+      if (fastMedia.exactDomains.length > 0) mediaRule.domain = fastMedia.exactDomains;
+      if (fastMedia.domainSuffixes.length > 0) mediaRule.domain_suffix = fastMedia.domainSuffixes;
+      routeRules.push({ ...mediaRule, outbound: 'proxy-active' });
+      dnsRules.push({ ...mediaRule, server: 'dns-remote' });
+    }
+
+    const aiDomains = collectAiRoutingDomains(settings);
+    const aiRule: Record<string, unknown> = {};
+    if (aiDomains.exactDomains.length > 0) aiRule.domain = aiDomains.exactDomains;
+    if (aiDomains.domainSuffixes.length > 0) aiRule.domain_suffix = aiDomains.domainSuffixes;
+    if (Object.keys(aiRule).length > 0) {
+      routeRules.push({ ...aiRule, outbound: 'proxy-ai' });
+      dnsRules.push({ ...aiRule, server: 'dns-ai' });
+    }
+  }
 
   if (settings.splitTunnelingEnabled && settings.bypassDomains.length > 0) {
     const { exactDomains, domainSuffixes } = extractSplitTunnelDomains(
@@ -727,7 +799,7 @@ export function buildMobileAutonomousSingboxProfile(
             type: 'urltest',
             tag: topGroupTag,
             outbounds: tags,
-            url: 'https://cp.cloudflare.com/generate_204',
+            url: 'http://connectivitycheck.gstatic.com/generate_204',
             interval: `${Math.max(15, settings.healthCheckIntervalSec * 2)}s`,
             tolerance: 60,
             interrupt_exist_connections: true,
@@ -737,32 +809,67 @@ export function buildMobileAutonomousSingboxProfile(
             tag: manualSelectTag,
             outbounds: [topGroupTag, ...tags],
             default: topGroupTag,
+            interrupt_exist_connections: true,
           },
+          {
+            type: 'selector',
+            tag: 'proxy-active',
+            outbounds: [topGroupTag, ...tags],
+            default: topGroupTag,
+            interrupt_exist_connections: true,
+          },
+          ...(enableAiGateway
+            ? [
+                {
+                  type: 'selector',
+                  tag: 'proxy-ai',
+                  outbounds: aiSelectorOutbounds,
+                  default: activeAiTag,
+                  interrupt_exist_connections: true,
+                },
+              ]
+            : []),
           ...outbounds,
           { type: 'direct', tag: 'direct' },
         ]
       : [{ type: 'direct', tag: 'direct' }];
 
+  const dnsServers: Array<Record<string, unknown>> = [
+    {
+      type: 'https',
+      tag: 'dns-remote',
+      server: doh.server,
+      server_port: doh.port,
+      path: doh.path,
+      detour: tags.length > 0 ? manualSelectTag : 'direct',
+      ...(doh.isDomain ? { domain_resolver: 'dns-direct' } : {}),
+    },
+    ...(enableAiGateway
+      ? [
+          {
+            type: 'https',
+            tag: 'dns-ai',
+            server: '1.1.1.1',
+            server_port: 443,
+            path: '/dns-query',
+            detour: 'proxy-ai',
+          },
+        ]
+      : []),
+    {
+      type: 'local',
+      tag: 'dns-direct',
+    },
+  ];
+
   return {
     log: { level: 'warn' },
     dns: {
-      servers: [
-        {
-          type: 'https',
-          tag: 'dns-remote',
-          server: doh.server,
-          server_port: doh.port,
-          path: doh.path,
-          detour: tags.length > 0 ? manualSelectTag : 'direct',
-          ...(doh.isDomain ? { domain_resolver: 'dns-direct' } : {}),
-        },
-        {
-          type: 'local',
-          tag: 'dns-direct',
-        },
-      ],
+      servers: dnsServers,
       rules: dnsRules,
       final: 'dns-remote',
+      strategy: 'prefer_ipv4',
+      independent_cache: true,
     },
     ...(endpoints.length > 0 ? { endpoints } : {}),
     inbounds: [
