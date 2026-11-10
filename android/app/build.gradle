@@ -23,6 +23,8 @@ android {
                 storePassword "aegismesh2026"
                 keyAlias "aegismesh"
                 keyPassword "aegismesh2026"
+                v1SigningEnabled true
+                v2SigningEnabled true
             }
         }
     }
