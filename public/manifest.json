@@ -1,0 +1,19 @@
+{
+  "name": "AegisMesh VPN — Умный Каскадный Щит",
+  "short_name": "AegisMesh",
+  "description": "Кибербезопасный мультипротокольный VPN-клиент с мгновенной автозаменой серверов (Auto-Failover 1 ➔ 2 ➔ 3), Kill Switch и мобильным мостом",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#070A0F",
+  "theme_color": "#070A0F",
+  "orientation": "portrait-primary",
+  "lang": "ru",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 128 128'%3E%3Crect width='128' height='128' rx='28' fill='%23070A0F'/%3E%3Cpath d='M64 16L22 34v30c0 27 18 46 42 54 24-8 42-27 42-54V34L64 16z' fill='none' stroke='%2300F59B' stroke-width='8'/%3E%3Ccircle cx='64' cy='64' r='14' fill='%2300F59B'/%3E%3C/svg%3E",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

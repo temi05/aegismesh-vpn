@@ -1,0 +1,28 @@
+# Зависимости и сборки
+node_modules/
+dist/
+release/
+bin/
+
+# Локальные сейфы ключей, переменные окружения и временные данные
+.vault/
+.aegismesh-data/
+.env
+.env.*
+*.log
+.DS_Store
+Thumbs.db
+
+# Собранные установочные пакеты Android и iOS
+*.apk
+*.aab
+ios/
+
+# Сборочные кэши и сгенерированные артефакты Android (исходный Java-код в android/ сохраняется в Git)
+android/.gradle/
+android/build/
+android/app/build/
+android/capacitor-cordova-android-plugins/build/
+android/local.properties
+android/app/src/main/assets/public/
+android/app/src/main/jniLibs/**/libsingbox.so

@@ -1,0 +1,911 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="ru"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>AegisMesh VPN — Тактический Щит и Каскад Автозамены</title>
+<!-- Google Fonts: Space Grotesk, Manrope, JetBrains Mono -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&amp;family=Manrope:wght@400;500;600;700&amp;family=Space+Grotesk:wght@600;700&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols Outlined (Exact literal transcription match) -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS v3 -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "on-primary": "#003920",
+            "surface-container-low": "#161c27",
+            "error-container": "#93000a",
+            "tertiary-fixed": "#ffdada",
+            "on-secondary-fixed": "#001f28",
+            "secondary-fixed-dim": "#47d6ff",
+            "on-tertiary": "#68001a",
+            "surface-container-high": "#242a36",
+            "tertiary": "#fff0f0",
+            "inverse-on-surface": "#2b303d",
+            "inverse-surface": "#dde2f2",
+            "primary-fixed": "#53ffab",
+            "outline-variant": "#3b4a3f",
+            "tertiary-container": "#ffcacb",
+            "surface-tint": "#00e38f",
+            "on-secondary": "#003543",
+            "surface-container": "#1a202b",
+            "on-secondary-container": "#00566a",
+            "on-error": "#690005",
+            "surface": "#0d131e",
+            "background": "#0d131e",
+            "on-background": "#dde2f2",
+            "on-tertiary-fixed-variant": "#920028",
+            "surface-dim": "#0d131e",
+            "on-error-container": "#ffdad6",
+            "tertiary-fixed-dim": "#ffb3b6",
+            "primary": "#cdffdc",
+            "on-surface-variant": "#b9cbbd",
+            "inverse-primary": "#006d42",
+            "on-primary-fixed": "#002111",
+            "secondary": "#a5e7ff",
+            "error": "#ffb4ab",
+            "secondary-fixed": "#b6ebff",
+            "on-secondary-fixed-variant": "#004e60",
+            "surface-variant": "#2f3541",
+            "surface-bright": "#333946",
+            "outline": "#849588",
+            "surface-container-lowest": "#080e19",
+            "on-primary-fixed-variant": "#005231",
+            "on-primary-container": "#006b41",
+            "secondary-container": "#00d2ff",
+            "on-tertiary-fixed": "#40000c",
+            "primary-container": "#00f59b",
+            "surface-container-highest": "#2f3541",
+            "on-tertiary-container": "#bc0036",
+            "on-surface": "#dde2f2",
+            "primary-fixed-dim": "#00e38f"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.125rem",
+            "lg": "0.25rem",
+            "xl": "0.5rem",
+            "full": "0.75rem"
+          },
+          "spacing": {
+            "space-sm": "0.5rem",
+            "space-md": "0.75rem",
+            "gutter-desktop": "1.5rem",
+            "space-xl": "2rem",
+            "space-xs": "0.25rem",
+            "space-lg": "1.25rem",
+            "margin": "1rem",
+            "gutter": "1rem",
+            "margin-desktop": "2rem"
+          },
+          "fontFamily": {
+            "body-sm": ["Manrope"],
+            "badge-code": ["JetBrains Mono"],
+            "telemetry-sm": ["JetBrains Mono"],
+            "telemetry-md": ["JetBrains Mono"],
+            "headline-lg": ["Space Grotesk"],
+            "headline-md": ["Space Grotesk"],
+            "body-md": ["Manrope"],
+            "display-xl-mobile": ["Space Grotesk"],
+            "telemetry-lg": ["JetBrains Mono"],
+            "headline-lg-mobile": ["Space Grotesk"],
+            "body-lg": ["Manrope"],
+            "display-xl": ["Space Grotesk"]
+          },
+          "fontSize": {
+            "body-sm": ["0.75rem", { "lineHeight": "1rem", "fontWeight": "400" }],
+            "badge-code": ["0.6875rem", { "lineHeight": "0.875rem", "letterSpacing": "0.06em", "fontWeight": "700" }],
+            "telemetry-sm": ["0.75rem", { "lineHeight": "1rem", "letterSpacing": "0.04em", "fontWeight": "400" }],
+            "telemetry-md": ["0.875rem", { "lineHeight": "1.25rem", "letterSpacing": "0", "fontWeight": "500" }],
+            "headline-lg": ["2rem", { "lineHeight": "2.5rem", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+            "headline-md": ["1.25rem", { "lineHeight": "1.75rem", "letterSpacing": "0.01em", "fontWeight": "600" }],
+            "body-md": ["0.875rem", { "lineHeight": "1.25rem", "fontWeight": "400" }],
+            "display-xl-mobile": ["2rem", { "lineHeight": "2.5rem", "letterSpacing": "-0.01em", "fontWeight": "700" }],
+            "telemetry-lg": ["1.125rem", { "lineHeight": "1.5rem", "letterSpacing": "-0.02em", "fontWeight": "600" }],
+            "headline-lg-mobile": ["1.5rem", { "lineHeight": "2rem", "letterSpacing": "0", "fontWeight": "600" }],
+            "body-lg": ["1rem", { "lineHeight": "1.5rem", "fontWeight": "500" }],
+            "display-xl": ["3rem", { "lineHeight": "3.5rem", "letterSpacing": "-0.02em", "fontWeight": "700" }]
+          }
+        }
+      }
+    }
+  </script>
+<style>
+    /* Tactical grid & scanline ambiance */
+    body {
+      background-color: #070A0F;
+      color: #dde2f2;
+      background-image: 
+        linear-gradient(to right, rgba(142, 158, 181, 0.03) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(142, 158, 181, 0.03) 1px, transparent 1px);
+      background-size: 32px 32px;
+      overflow-x: hidden;
+    }
+
+    .shield-glow {
+      box-shadow: 0 0 35px -5px rgba(0, 245, 155, 0.35), inset 0 0 20px rgba(0, 245, 155, 0.12);
+    }
+    .amber-glow {
+      box-shadow: 0 0 24px -4px rgba(255, 176, 32, 0.3), inset 0 0 12px rgba(255, 176, 32, 0.08);
+    }
+    .cyan-glow {
+      box-shadow: 0 0 24px -4px rgba(0, 210, 255, 0.3), inset 0 0 12px rgba(0, 210, 255, 0.08);
+    }
+    .crimson-glow {
+      box-shadow: 0 0 25px -3px rgba(255, 59, 92, 0.45);
+    }
+
+    @keyframes pulse-radar {
+      0% { transform: scale(0.96); opacity: 0.8; }
+      50% { transform: scale(1.04); opacity: 0.3; }
+      100% { transform: scale(0.96); opacity: 0.8; }
+    }
+    .animate-radar {
+      animation: pulse-radar 3s ease-in-out infinite;
+    }
+
+    @keyframes conduit-flow {
+      0% { stroke-dashoffset: 40; }
+      100% { stroke-dashoffset: 0; }
+    }
+    .conduit-stream {
+      stroke-dasharray: 6 6;
+      animation: conduit-flow 1.2s linear infinite;
+    }
+
+    /* Custom thin scrollbar */
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: #080e19; }
+    ::-webkit-scrollbar-thumb { background: #242a36; border-radius: 2px; }
+    ::-webkit-scrollbar-thumb:hover { background: #3b4a3f; }
+  </style>
+</head>
+<body class="min-h-screen font-body-md text-on-surface antialiased flex selection:bg-primary-container selection:text-on-primary">
+<!-- ========================================================================= -->
+<!-- 1. LEFT TACTICAL DRAWER (SideNavBar JSON component implemented verbatim)  -->
+<!-- ========================================================================= -->
+<aside class="fixed top-0 left-0 h-screen w-64 border-r border-outline-variant bg-surface-container-lowest flex flex-col justify-between p-4 z-50 select-none">
+<!-- Top Brand & Score -->
+<div class="space-y-4">
+<!-- Brand Header -->
+<div class="flex items-center gap-3 pb-3 border-b border-outline-variant">
+<div class="w-10 h-10 rounded bg-surface-container-high border border-primary-container flex items-center justify-center shield-glow text-primary-container">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">security</span>
+</div>
+<div>
+<h1 class="text-headline-md font-headline-md text-primary tracking-wider uppercase font-bold leading-none">AEGISMESH</h1>
+<p class="font-telemetry-sm text-telemetry-sm text-on-surface-variant mt-1">CORE v4.19-SEC</p>
+</div>
+</div>
+<!-- Security Score Pill -->
+<div class="px-2.5 py-1.5 rounded bg-surface-container border border-outline-variant flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-primary-container animate-ping"></span>
+<span class="font-badge-code text-badge-code text-primary uppercase">98/100 СЧЕТ</span>
+</div>
+<span class="font-badge-code text-badge-code text-primary-container font-bold">КИБЕРЗАЩИТА</span>
+</div>
+<!-- Navigation Links from JSON (Exact labels & icons) -->
+<nav class="space-y-1 pt-1">
+<!-- Tab 1: Active (Nodes & Topology / Щит и Каскад) -->
+<a class="flex items-center gap-3 px-3 py-2.5 rounded bg-surface-container text-primary border-l-2 border-primary-container font-telemetry-md text-telemetry-md cursor-pointer active:translate-x-0.5 transition-transform duration-100 group" href="#nodes">
+<span class="material-symbols-outlined text-primary-container" style="font-variation-settings: 'FILL' 1;">hub</span>
+<span class="flex-1 font-telemetry-md">Nodes &amp; Topology</span>
+<span class="font-badge-code text-badge-code px-1.5 py-0.5 rounded bg-primary-container/20 text-primary-container border border-primary-container/40">АКТИВ</span>
+</a>
+<!-- Tab 2: Traffic Telemetry -->
+<a class="flex items-center gap-3 px-3 py-2.5 rounded text-on-surface-variant hover:text-on-surface hover:bg-surface-container-low transition-colors duration-150 font-telemetry-md text-telemetry-md cursor-pointer active:translate-x-0.5 transition-transform duration-100 group" href="#traffic">
+<span class="material-symbols-outlined group-hover:text-secondary">monitoring</span>
+<span class="flex-1">Traffic Telemetry</span>
+<span class="font-badge-code text-badge-code px-1.5 py-0.5 rounded bg-surface-container-high text-secondary border border-outline-variant">14 НОД</span>
+</a>
+<!-- Tab 3: Diagnostics -->
+<a class="flex items-center gap-3 px-3 py-2.5 rounded text-on-surface-variant hover:text-on-surface hover:bg-surface-container-low transition-colors duration-150 font-telemetry-md text-telemetry-md cursor-pointer active:translate-x-0.5 transition-transform duration-100 group" href="#diag">
+<span class="material-symbols-outlined group-hover:text-primary">terminal</span>
+<span class="flex-1">Diagnostics</span>
+<span class="font-badge-code text-badge-code px-1.5 py-0.5 rounded bg-surface-container-high text-primary border border-outline-variant">0 УТЕЧЕК</span>
+</a>
+<!-- Tab 4: Routing Rules -->
+<a class="flex items-center gap-3 px-3 py-2.5 rounded text-on-surface-variant hover:text-on-surface hover:bg-surface-container-low transition-colors duration-150 font-telemetry-md text-telemetry-md cursor-pointer active:translate-x-0.5 transition-transform duration-100 group" href="#rules">
+<span class="material-symbols-outlined group-hover:text-secondary-fixed-dim">alt_route</span>
+<span class="flex-1">Routing Rules</span>
+<span class="font-badge-code text-badge-code px-1.5 py-0.5 rounded bg-surface-container-high text-on-surface-variant border border-outline-variant">82/82</span>
+</a>
+<!-- Tab 5: Settings -->
+<a class="flex items-center gap-3 px-3 py-2.5 rounded text-on-surface-variant hover:text-on-surface hover:bg-surface-container-low transition-colors duration-150 font-telemetry-md text-telemetry-md cursor-pointer active:translate-x-0.5 transition-transform duration-100 group" href="#settings">
+<span class="material-symbols-outlined group-hover:text-on-surface">tune</span>
+<span class="flex-1">Settings</span>
+</a>
+</nav>
+</div>
+<!-- Bottom Aux + Core Uptime + Emergency Kill Switch CTA -->
+<div class="space-y-3 pt-3 border-t border-outline-variant">
+<!-- Footer Tabs from JSON -->
+<div class="flex items-center justify-between text-on-surface-variant text-telemetry-sm font-telemetry-sm px-1">
+<button class="flex items-center gap-1.5 hover:text-secondary transition-colors cursor-pointer">
+<span class="material-symbols-outlined text-sm">qr_code_2</span>
+<span>Bridge Link</span>
+</button>
+<span class="text-outline-variant">|</span>
+<button class="flex items-center gap-1.5 hover:text-primary transition-colors cursor-pointer">
+<span class="material-symbols-outlined text-sm">description</span>
+<span>Logs</span>
+</button>
+</div>
+<!-- Core Specs Card -->
+<div class="p-2.5 rounded bg-surface-container-low border border-outline-variant font-telemetry-sm text-telemetry-sm space-y-1">
+<div class="flex justify-between items-center text-on-surface-variant">
+<span>sing-box:</span>
+<span class="text-primary font-mono font-bold">v1.12.3</span>
+</div>
+<div class="flex justify-between items-center text-on-surface-variant">
+<span>Аптайм:</span>
+<span class="text-on-surface font-mono">14ч 32м 18с</span>
+</div>
+<div class="flex justify-between items-center text-on-surface-variant pt-1 border-t border-outline-variant">
+<span>Сейф шифра:</span>
+<span class="text-primary-container font-bold">AES-256-GCM</span>
+</div>
+</div>
+<!-- JSON CTA: EMERGENCY TERMINATE (Kill Switch) -->
+<button class="w-full py-2.5 px-3 rounded bg-error-container text-white border border-error/50 font-badge-code text-badge-code tracking-widest flex items-center justify-center gap-2 crimson-glow hover:bg-error-container/90 active:scale-95 transition-all duration-100 cursor-pointer" id="killSwitchSide">
+<span class="material-symbols-outlined text-base">emergency_home</span>
+<span>EMERGENCY TERMINATE</span>
+</button>
+</div>
+</aside>
+<!-- ========================================================================= -->
+<!-- 2. TOP TELEMETRY BAR (TopNavBar JSON component implemented verbatim)     -->
+<!-- ========================================================================= -->
+<header class="fixed top-0 left-64 right-0 h-16 border-b border-outline-variant bg-surface-container-lowest z-40 flex justify-between items-center px-6 select-none">
+<!-- Left product brand & Status pills -->
+<div class="flex items-center gap-6">
+<div class="flex items-center gap-2.5">
+<span class="text-headline-md font-headline-md text-primary font-bold tracking-tight">AegisMesh NOC Command</span>
+<span class="font-badge-code text-badge-code px-2 py-0.5 rounded bg-primary-container/15 text-primary-container border border-primary-container/30 uppercase">
+          RU-CORE
+        </span>
+</div>
+<!-- Active Links / Live Statuses from JSON -->
+<div class="hidden lg:flex items-center gap-4 text-telemetry-md font-telemetry-md border-l border-outline-variant pl-6">
+<div class="flex items-center gap-2 text-primary font-bold">
+<span class="w-2 h-2 rounded-full bg-primary-container animate-pulse"></span>
+<span>STATUS: SHIELD ARMED</span>
+</div>
+<span class="text-outline-variant">/</span>
+<div class="flex items-center gap-2 text-secondary">
+<span class="material-symbols-outlined text-sm">reorder</span>
+<span>CASCADE: OPTIMAL</span>
+</div>
+<span class="text-outline-variant">/</span>
+<div class="flex items-center gap-2 text-primary-container font-mono">
+<span class="material-symbols-outlined text-sm">speed</span>
+<span>LATENCY: 14MS</span>
+</div>
+</div>
+</div>
+<!-- Right Operations / Trailing actions from JSON -->
+<div class="flex items-center gap-3">
+<!-- Fast Telemetry chips -->
+<div class="hidden xl:flex items-center gap-3 font-telemetry-sm text-telemetry-sm bg-surface-container px-3 py-1.5 rounded border border-outline-variant">
+<span class="text-on-surface-variant">↓ <strong class="text-secondary font-mono">124.6 Мб/с</strong></span>
+<span class="text-outline-variant">|</span>
+<span class="text-on-surface-variant">↑ <strong class="text-primary-container font-mono">48.2 Мб/с</strong></span>
+<span class="text-outline-variant">|</span>
+<span class="text-on-surface-variant">Loss: <strong class="text-primary font-mono">0.0%</strong></span>
+</div>
+<!-- JSON Action: IMPORT CONFIG -->
+<button class="px-3 py-1.5 rounded bg-surface-container-high hover:bg-surface-variant border border-outline-variant text-on-surface font-telemetry-md text-telemetry-md flex items-center gap-1.5 transition-all duration-150 cursor-pointer">
+<span class="material-symbols-outlined text-base">cloud_upload</span>
+<span>IMPORT CONFIG</span>
+</button>
+<!-- JSON Trailing Icon Actions: sync, notifications_active, terminal -->
+<div class="flex items-center gap-1 border-l border-outline-variant pl-2">
+<button class="w-8 h-8 rounded flex items-center justify-center text-on-surface-variant hover:text-primary hover:bg-surface-container transition-all cursor-pointer" title="Sync Nodes">
+<span class="material-symbols-outlined text-lg">sync</span>
+</button>
+<button class="w-8 h-8 rounded flex items-center justify-center text-on-surface-variant hover:text-secondary hover:bg-surface-container transition-all cursor-pointer relative" title="Alerts">
+<span class="material-symbols-outlined text-lg">notifications_active</span>
+<span class="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-primary-container"></span>
+</button>
+<button class="w-8 h-8 rounded flex items-center justify-center text-on-surface-variant hover:text-primary hover:bg-surface-container transition-all cursor-pointer" title="Terminal Diagnostic">
+<span class="material-symbols-outlined text-lg">terminal</span>
+</button>
+</div>
+<!-- JSON Trailing Primary Action: ENGAGE KILL SWITCH -->
+<button class="px-3.5 py-1.5 rounded bg-error-container text-white border border-error/40 font-badge-code text-badge-code tracking-wider hover:bg-error-container/90 active:scale-95 transition-all crimson-glow flex items-center gap-1.5 cursor-pointer">
+<span class="material-symbols-outlined text-base">warning</span>
+<span>ENGAGE KILL SWITCH</span>
+</button>
+</div>
+</header>
+<!-- ========================================================================= -->
+<!-- 3. MAIN WORKSPACE CANVAS (Bento Grid: Center Hero & Right Cyber Column)  -->
+<!-- ========================================================================= -->
+<main class="ml-64 mt-16 p-6 flex-1 min-h-[calc(100vh-4rem)] grid grid-cols-12 gap-6 bg-[#070A0F]">
+<!-- ========================================================== -->
+<!-- CENTER COLUMN: HERO ORB + CASCADE CONDUIT + FAILOVER BENCH -->
+<!-- ========================================================== -->
+<section class="col-span-12 xl:col-span-8 flex flex-col gap-6">
+<!-- HERO BANNER: Tactical Shield Controller -->
+<div class="relative overflow-hidden rounded bg-surface border border-outline-variant p-6 flex flex-col md:flex-row items-center justify-between gap-6 shadow-2xl">
+<!-- Ambient grid glow overlay -->
+<div class="absolute -right-20 -bottom-20 w-80 h-80 bg-primary-container/10 rounded-full blur-3xl pointer-events-none"></div>
+<!-- Left metadata of shield -->
+<div class="space-y-4 z-10 flex-1">
+<div class="inline-flex items-center gap-2 px-2.5 py-1 rounded bg-surface-container-high border border-primary-container/30">
+<span class="w-2 h-2 rounded-full bg-primary-container animate-ping"></span>
+<span class="font-badge-code text-badge-code text-primary-container">VLESS-REALITY • CHACHA20-POLY1305</span>
+</div>
+<div>
+<h2 class="text-headline-lg font-headline-lg text-on-surface tracking-tight">
+              Тактический Щит Активен
+            </h2>
+<p class="font-body-md text-body-md text-on-surface-variant mt-1">
+              Бесшовный туннель без раскрытия SNI. Аппаратный обход инспекции пакетов (DPI-Bypass Level 4).
+            </p>
+</div>
+<!-- Live Session Info Stats -->
+<div class="grid grid-cols-3 gap-3 pt-2">
+<div class="p-2.5 rounded bg-surface-container-lowest border border-outline-variant">
+<span class="font-telemetry-sm text-telemetry-sm text-on-surface-variant block">Таймер сессии</span>
+<span class="font-telemetry-lg text-telemetry-lg text-primary font-mono font-bold" id="sessionTimer">04:19:22</span>
+</div>
+<div class="p-2.5 rounded bg-surface-container-lowest border border-outline-variant">
+<span class="font-telemetry-sm text-telemetry-sm text-on-surface-variant block">Маскированный IP</span>
+<span class="font-telemetry-md text-telemetry-md text-secondary font-mono">185.220.101.41</span>
+</div>
+<div class="p-2.5 rounded bg-surface-container-lowest border border-outline-variant">
+<span class="font-telemetry-sm text-telemetry-sm text-on-surface-variant block">Выходной шлюз</span>
+<span class="font-telemetry-md text-telemetry-md text-on-surface flex items-center gap-1 font-mono">
+                🇩🇪 Франкфурт #1
+              </span>
+</div>
+</div>
+</div>
+<!-- Right Large Central Tactical Shield Orb / Toggle Button -->
+<div class="z-10 flex flex-col items-center justify-center">
+<div class="relative flex items-center justify-center p-3">
+<!-- Pulsing outer radar ring -->
+<div class="absolute inset-0 rounded-full border border-primary-container/40 animate-radar"></div>
+<div class="absolute inset-2 rounded-full border border-primary/20"></div>
+<!-- Shield Button -->
+<button class="relative w-44 h-44 rounded-full bg-gradient-to-b from-[#142322] to-[#0a1516] border-2 border-primary-container shield-glow flex flex-col items-center justify-center text-center p-4 hover:scale-[1.02] active:scale-95 transition-all duration-200 cursor-pointer group" id="mainShieldBtn">
+<div class="w-12 h-12 rounded-full bg-primary-container/20 flex items-center justify-center text-primary-container mb-1 group-hover:bg-primary-container/30 transition-colors">
+<span class="material-symbols-outlined text-3xl" style="font-variation-settings: 'FILL' 1;">shield</span>
+</div>
+<span class="font-badge-code text-badge-code text-primary-container tracking-wider font-bold">ЩИТ АКТИВЕН</span>
+<span class="font-telemetry-sm text-telemetry-sm text-primary font-mono mt-0.5">ЗАЩИЩЕНО</span>
+<div class="mt-1 flex items-center gap-1.5 font-badge-code text-badge-code text-on-surface-variant">
+<span class="w-1.5 h-1.5 rounded-full bg-primary-container"></span>
+<span class="font-mono text-primary font-bold">18 мс</span>
+</div>
+</button>
+</div>
+<span class="font-telemetry-sm text-telemetry-sm text-on-surface-variant mt-2">Клик: Безопасный разрыв</span>
+</div>
+</div>
+<!-- ========================================================================= -->
+<!-- INTERACTIVE FAILOVER CASCADE PIPELINE (1 ➔ 2 ➔ 3)                         -->
+<!-- ========================================================================= -->
+<div class="rounded bg-surface border border-outline-variant p-6 space-y-4">
+<div class="flex flex-col sm:flex-row sm:items-center justify-between pb-2 border-b border-outline-variant gap-2">
+<div>
+<h3 class="text-headline-md font-headline-md text-on-surface flex items-center gap-2">
+<span class="material-symbols-outlined text-primary-container">alt_route</span>
+<span>Цепочка Автозамены 1 ➔ 2 ➔ 3 (Hot-Standby Failover)</span>
+</h3>
+<p class="font-telemetry-sm text-telemetry-sm text-on-surface-variant">
+              Мгновенный подхват соединений без падения TCP-потоков при блокировке или задержке &gt;200мс.
+            </p>
+</div>
+<div class="flex items-center gap-2 font-badge-code text-badge-code">
+<span class="px-2 py-1 rounded bg-primary-container/10 border border-primary-container/30 text-primary-container">
+              AUTO-SWITCH: ON (0ms TCP LAG)
+            </span>
+</div>
+</div>
+<!-- Visual 3-Node Cascade Grid with conduits -->
+<div class="grid grid-cols-1 md:grid-cols-11 items-center gap-3 pt-2">
+<!-- NODE 1: MAIN ACTIVE -->
+<div class="md:col-span-3 rounded bg-surface-container-lowest border-2 border-primary-container p-4 shield-glow relative space-y-3 transition-all" id="node1Card">
+<div class="flex justify-between items-start">
+<div>
+<span class="font-badge-code text-badge-code px-1.5 py-0.5 rounded bg-primary-container/20 text-primary-container border border-primary-container/40">
+                  УЗЕЛ #1 • MASTER
+                </span>
+<h4 class="font-headline-md text-headline-md text-on-surface mt-1 flex items-center gap-1.5">
+                  🇩🇪 Франкфурт #1
+                </h4>
+</div>
+<span class="w-3 h-3 rounded-full bg-primary-container shadow-[0_0_8px_#00F59B]"></span>
+</div>
+<div class="space-y-1 font-telemetry-sm text-telemetry-sm text-on-surface-variant font-mono">
+<div class="flex justify-between">
+<span>Протокол:</span>
+<span class="text-primary font-bold">VLESS-Reality</span>
+</div>
+<div class="flex justify-between">
+<span>Порт:</span>
+<span class="text-on-surface">TCP 443 (TLS)</span>
+</div>
+<div class="flex justify-between">
+<span>Пинг:</span>
+<span class="text-primary font-bold" id="node1Ping">18 мс [СТАБИЛЬНО]</span>
+</div>
+<div class="flex justify-between">
+<span>Трафик:</span>
+<span class="text-secondary">4.2 ГБ / ∞</span>
+</div>
+</div>
+<div class="pt-2 border-t border-outline-variant flex items-center justify-between font-badge-code text-badge-code">
+<span class="text-primary font-bold">100% ОНЛАЙН</span>
+<span class="text-on-surface-variant font-mono">MAIN ROUTE</span>
+</div>
+</div>
+<!-- CONNECTOR 1 -> 2 (SVG Animated Conduit) -->
+<div class="md:col-span-1 flex md:flex-col items-center justify-center py-2 md:py-0">
+<svg class="w-12 h-6 md:w-full md:h-12 text-primary-container" fill="none" viewbox="0 0 100 40">
+<path class="conduit-stream" d="M 0 20 L 100 20" stroke="currentColor" stroke-linecap="round" stroke-width="3"></path>
+<polygon fill="currentColor" points="95,14 100,20 95,26"></polygon>
+</svg>
+<span class="font-badge-code text-badge-code text-primary-container mt-1 hidden md:block">0.02с</span>
+</div>
+<!-- NODE 2: HOT STANDBY -->
+<div class="md:col-span-3 rounded bg-surface-container-lowest border border-[#FFB020] p-4 amber-glow relative space-y-3 transition-all" id="node2Card">
+<div class="flex justify-between items-start">
+<div>
+<span class="font-badge-code text-badge-code px-1.5 py-0.5 rounded bg-[#FFB020]/20 text-[#FFB020] border border-[#FFB020]/40">
+                  УЗЕЛ #2 • HOT STANDBY
+                </span>
+<h4 class="font-headline-md text-headline-md text-on-surface mt-1 flex items-center gap-1.5">
+                  🇳🇱 Амстердам
+                </h4>
+</div>
+<span class="w-2.5 h-2.5 rounded-full bg-[#FFB020] animate-pulse"></span>
+</div>
+<div class="space-y-1 font-telemetry-sm text-telemetry-sm text-on-surface-variant font-mono">
+<div class="flex justify-between">
+<span>Протокол:</span>
+<span class="text-[#FFB020] font-bold">Hysteria2 (UDP)</span>
+</div>
+<div class="flex justify-between">
+<span>Порт:</span>
+<span class="text-on-surface">Port Hopping</span>
+</div>
+<div class="flex justify-between">
+<span>Пинг:</span>
+<span class="text-[#FFB020] font-bold">46 мс [ГОТОВ]</span>
+</div>
+<div class="flex justify-between">
+<span>Готовность:</span>
+<span class="text-secondary font-mono">0.02 сек (WARM)</span>
+</div>
+</div>
+<div class="pt-2 border-t border-outline-variant flex items-center justify-between font-badge-code text-badge-code">
+<span class="text-[#FFB020] font-bold">ГОТОВ К ПЕРЕХВАТУ</span>
+<span class="text-on-surface-variant font-mono">FAILOVER #1</span>
+</div>
+</div>
+<!-- CONNECTOR 2 -> 3 (SVG Conduit) -->
+<div class="md:col-span-1 flex md:flex-col items-center justify-center py-2 md:py-0">
+<svg class="w-12 h-6 md:w-full md:h-12 text-secondary-container" fill="none" viewbox="0 0 100 40">
+<path d="M 0 20 L 100 20" stroke="currentColor" stroke-dasharray="4 4" stroke-width="2.5"></path>
+<polygon fill="currentColor" points="95,15 100,20 95,25"></polygon>
+</svg>
+<span class="font-badge-code text-badge-code text-secondary-container mt-1 hidden md:block">COLD</span>
+</div>
+<!-- NODE 3: COLD STANDBY -->
+<div class="md:col-span-3 rounded bg-surface-container-lowest border border-secondary-container/40 p-4 cyan-glow relative space-y-3 transition-all" id="node3Card">
+<div class="flex justify-between items-start">
+<div>
+<span class="font-badge-code text-badge-code px-1.5 py-0.5 rounded bg-secondary-container/20 text-secondary-container border border-secondary-container/40">
+                  УЗЕЛ #3 • COLD STANDBY
+                </span>
+<h4 class="font-headline-md text-headline-md text-on-surface mt-1 flex items-center gap-1.5">
+                  🇫🇮 Хельсинки
+                </h4>
+</div>
+<span class="w-2.5 h-2.5 rounded-full bg-secondary-container"></span>
+</div>
+<div class="space-y-1 font-telemetry-sm text-telemetry-sm text-on-surface-variant font-mono">
+<div class="flex justify-between">
+<span>Протокол:</span>
+<span class="text-secondary font-bold">WireGuard-Obfs</span>
+</div>
+<div class="flex justify-between">
+<span>Порт:</span>
+<span class="text-on-surface">UDP 51820</span>
+</div>
+<div class="flex justify-between">
+<span>Пинг:</span>
+<span class="text-secondary font-bold">78 мс [РЕЗЕРВ]</span>
+</div>
+<div class="flex justify-between">
+<span>Резерв:</span>
+<span class="text-on-surface-variant font-mono">Автономный шлюз</span>
+</div>
+</div>
+<div class="pt-2 border-t border-outline-variant flex items-center justify-between font-badge-code text-badge-code">
+<span class="text-secondary font-bold">ЗАПАСНОЙ КАНАЛ</span>
+<span class="text-on-surface-variant font-mono">FAILOVER #2</span>
+</div>
+</div>
+</div>
+</div>
+<!-- ========================================================================= -->
+<!-- LIVE TELEMETRY & FAILOVER SANDBOX / BENCH                                 -->
+<!-- ========================================================================= -->
+<div class="rounded bg-surface border border-outline-variant p-5 space-y-4">
+<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+<div>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-secondary">analytics</span>
+<h4 class="font-headline-md text-headline-md text-on-surface">
+                Лабораторный Стенд Тестирования Auto-Failover
+              </h4>
+</div>
+<p class="font-telemetry-sm text-telemetry-sm text-on-surface-variant">
+              Проверка динамической реакции ядра sing-box на отказ маршрутизации или потерю пакетов.
+            </p>
+</div>
+<div class="font-badge-code text-badge-code text-primary bg-surface-container px-3 py-1 rounded border border-outline-variant flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-primary-container animate-pulse"></span>
+<span id="failoverStatusText">Время переключения: 12 мс • Потери TCP: 0</span>
+</div>
+</div>
+<!-- Mini Telemetry Waterfall Sparkline SVG -->
+<div class="p-3 rounded bg-surface-container-lowest border border-outline-variant space-y-2">
+<div class="flex justify-between items-center text-telemetry-sm font-telemetry-sm text-on-surface-variant">
+<span>График задержки (мс) в реальном времени — 60 сек</span>
+<span class="font-mono text-primary">ТЕКУЩИЙ ПИНГ: <strong class="text-primary-container" id="liveGraphPing">18 мс</strong></span>
+</div>
+<div class="h-24 w-full relative">
+<svg class="w-full h-full" preserveaspectratio="none" viewbox="0 0 500 100">
+<defs>
+<lineargradient id="latencyGradient" x1="0" x2="0" y1="0" y2="1">
+<stop offset="0%" stop-color="#00F59B" stop-opacity="0.3"></stop>
+<stop offset="100%" stop-color="#00F59B" stop-opacity="0.0"></stop>
+</lineargradient>
+</defs>
+<!-- Gridlines -->
+<line stroke="#3b4a3f" stroke-dasharray="3 3" stroke-width="0.5" x1="0" x2="500" y1="25" y2="25"></line>
+<line stroke="#3b4a3f" stroke-dasharray="3 3" stroke-width="0.5" x1="0" x2="500" y1="50" y2="50"></line>
+<line stroke="#3b4a3f" stroke-dasharray="3 3" stroke-width="0.5" x1="0" x2="500" y1="75" y2="75"></line>
+<!-- Area fill -->
+<polygon fill="url(#latencyGradient)" id="graphArea" points="0,75 50,73 100,74 150,72 200,75 250,71 300,74 350,73 400,72 450,74 500,73 500,100 0,100"></polygon>
+<!-- Vector Line -->
+<polyline fill="none" id="graphLine" points="0,75 50,73 100,74 150,72 200,75 250,71 300,74 350,73 400,72 450,74 500,73" stroke="#00F59B" stroke-width="2"></polyline>
+<!-- Historical switch marker -->
+<circle cx="200" cy="75" fill="#00D2FF" r="3"></circle>
+</svg>
+</div>
+<div class="flex justify-between text-telemetry-sm font-telemetry-sm text-outline-variant font-mono">
+<span>-60с</span>
+<span>-45с</span>
+<span>-30с (Sync Ok)</span>
+<span>-15с</span>
+<span>Сейчас (0с)</span>
+</div>
+</div>
+<!-- Simulation Interactive Buttons -->
+<div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+<button class="px-3 py-2.5 rounded bg-surface-container hover:bg-surface-container-high border border-error/50 hover:border-error text-error font-telemetry-md text-telemetry-md flex items-center justify-center gap-2 transition-all cursor-pointer" id="simDropNode1">
+<span class="material-symbols-outlined text-base">link_off</span>
+<span>Уронить узел #1 (Тест)</span>
+</button>
+<button class="px-3 py-2.5 rounded bg-surface-container hover:bg-surface-container-high border border-[#FFB020]/50 hover:border-[#FFB020] text-[#FFB020] font-telemetry-md text-telemetry-md flex items-center justify-center gap-2 transition-all cursor-pointer" id="simLag">
+<span class="material-symbols-outlined text-base">hourglass_top</span>
+<span>Имитировать лаг +2200мс</span>
+</button>
+<button class="px-3 py-2.5 rounded bg-surface-container hover:bg-surface-container-high border border-secondary-container/50 hover:border-secondary-container text-secondary font-telemetry-md text-telemetry-md flex items-center justify-center gap-2 transition-all cursor-pointer" id="simForceJump">
+<span class="material-symbols-outlined text-base">swap_horiz</span>
+<span>Прыжок на Узел #2</span>
+</button>
+</div>
+</div>
+</section>
+<!-- ========================================================== -->
+<!-- RIGHT COLUMN: CYBER-DEFENSE SWITCHES, IMPORT & MOBILE QR   -->
+<!-- ========================================================== -->
+<section class="col-span-12 xl:col-span-4 flex flex-col gap-6">
+<!-- 1. CYBER-DEFENSE HARDWARE-STYLE MODULES -->
+<div class="rounded bg-surface border border-outline-variant p-5 space-y-4">
+<div class="flex items-center justify-between pb-2 border-b border-outline-variant">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary-container">shield_with_heart</span>
+<h3 class="font-headline-md text-headline-md text-on-surface">
+              Киберзащита и Модули
+            </h3>
+</div>
+<span class="font-badge-code text-badge-code text-primary font-bold">4 АКТИВНЫ</span>
+</div>
+<!-- Switches Stack -->
+<div class="space-y-3">
+<!-- Switch 1: Kill Switch -->
+<div class="p-3 rounded bg-surface-container-lowest border border-outline-variant flex items-center justify-between gap-3">
+<div class="space-y-0.5">
+<div class="flex items-center gap-1.5 font-telemetry-md text-telemetry-md text-on-surface font-semibold">
+<span class="text-error font-mono font-bold">Kill Switch</span>
+<span class="font-badge-code text-badge-code text-error px-1 rounded bg-error-container/30">0 БАЙТ УТЕЧКИ</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant">
+                Блокирует стек адаптера при малейшем разрыве туннеля.
+              </p>
+</div>
+<!-- Toggle -->
+<button class="toggle-btn w-12 h-6 rounded bg-primary-container p-0.5 flex items-center justify-end transition-colors cursor-pointer" data-state="on">
+<span class="w-5 h-5 rounded bg-[#070A0F] font-badge-code text-[9px] flex items-center justify-center font-bold text-primary-container">ON</span>
+</button>
+</div>
+<!-- Switch 2: Secure DNS DoH -->
+<div class="p-3 rounded bg-surface-container-lowest border border-outline-variant flex items-center justify-between gap-3">
+<div class="space-y-0.5">
+<div class="flex items-center gap-1.5 font-telemetry-md text-telemetry-md text-on-surface font-semibold">
+<span>DNS-over-HTTPS (DoH)</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant">
+                AdGuard + Cloudflare DoH. Полная защита от DNS Leak &amp; Спуфинга.
+              </p>
+</div>
+<button class="toggle-btn w-12 h-6 rounded bg-primary-container p-0.5 flex items-center justify-end transition-colors cursor-pointer" data-state="on">
+<span class="w-5 h-5 rounded bg-[#070A0F] font-badge-code text-[9px] flex items-center justify-center font-bold text-primary-container">ON</span>
+</button>
+</div>
+<!-- Switch 3: Split Tunneling -->
+<div class="p-3 rounded bg-surface-container-lowest border border-outline-variant flex items-center justify-between gap-3">
+<div class="space-y-0.5">
+<div class="flex items-center gap-1.5 font-telemetry-md text-telemetry-md text-on-surface font-semibold">
+<span>Split Tunneling</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant">
+                Белый список банков РФ, Госуслуг и локальных сетей (192.168.0.0/16).
+              </p>
+</div>
+<button class="toggle-btn w-12 h-6 rounded bg-primary-container p-0.5 flex items-center justify-end transition-colors cursor-pointer" data-state="on">
+<span class="w-5 h-5 rounded bg-[#070A0F] font-badge-code text-[9px] flex items-center justify-center font-bold text-primary-container">ON</span>
+</button>
+</div>
+<!-- Switch 4: Anti-DPI Obfuscation -->
+<div class="p-3 rounded bg-surface-container-lowest border border-outline-variant flex items-center justify-between gap-3">
+<div class="space-y-0.5">
+<div class="flex items-center gap-1.5 font-telemetry-md text-telemetry-md text-on-surface font-semibold">
+<span>Анти-DPI и Маскировка</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant">
+                Подделка TLS 1.3 ClientHello (Chrome 124 fingerprint) + фрагментация.
+              </p>
+</div>
+<button class="toggle-btn w-12 h-6 rounded bg-primary-container p-0.5 flex items-center justify-end transition-colors cursor-pointer" data-state="on">
+<span class="w-5 h-5 rounded bg-[#070A0F] font-badge-code text-[9px] flex items-center justify-center font-bold text-primary-container">ON</span>
+</button>
+</div>
+</div>
+</div>
+<!-- 2. QUICK VPN KEY & SUBSCRIPTION IMPORT -->
+<div class="rounded bg-surface border border-outline-variant p-5 space-y-3">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-secondary">vpn_key</span>
+<h4 class="font-headline-md text-headline-md text-on-surface">
+              Импорт Ключа / Ссылки
+            </h4>
+</div>
+<span class="font-badge-code text-badge-code text-on-surface-variant">MULTI-FORMAT</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant">
+          Поддержка: <code class="text-secondary font-mono">vless://</code>, <code class="text-primary font-mono">vmess://</code>, <code class="text-on-surface font-mono">ss://</code>, <code class="text-[#FFB020] font-mono">hy2://</code>, <code class="text-secondary-fixed font-mono">wg://</code> или подписки.
+        </p>
+<div class="space-y-2">
+<input class="w-full bg-[#070A0F] border border-outline-variant rounded p-2.5 text-on-surface font-telemetry-sm text-telemetry-sm placeholder-[#4B5970] focus:border-secondary-container focus:outline-none transition-colors" placeholder="Вставьте vless://, sing-box JSON или URL подписки..." type="text"/>
+<div class="flex items-center gap-2">
+<button class="flex-1 py-2 px-3 rounded bg-surface-container-high hover:bg-surface-variant border border-outline-variant text-primary font-telemetry-md text-telemetry-md flex items-center justify-center gap-1.5 transition-colors cursor-pointer">
+<span class="material-symbols-outlined text-base">download_done</span>
+<span>Импорт ключа</span>
+</button>
+<button class="py-2 px-3 rounded bg-surface-container-high hover:bg-surface-variant border border-outline-variant text-on-surface-variant hover:text-on-surface font-telemetry-md text-telemetry-md transition-colors cursor-pointer" title="Тест конфига">
+<span class="material-symbols-outlined text-base">fact_check</span>
+</button>
+</div>
+</div>
+</div>
+<!-- 3. MOBILE BRIDGE (QR-CODE QUICK SYNC) -->
+<div class="rounded bg-surface border border-outline-variant p-5 space-y-4">
+<div class="flex items-center justify-between pb-2 border-b border-outline-variant">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-secondary">devices</span>
+<h4 class="font-headline-md text-headline-md text-on-surface">
+              Мобильный Мост (iOS / Android)
+            </h4>
+</div>
+<span class="font-badge-code text-badge-code px-1.5 py-0.5 rounded bg-primary-container/20 text-primary-container">
+            СВЯЗАН
+          </span>
+</div>
+<div class="flex items-center gap-4">
+<!-- Vector crisp QR code mock -->
+<div class="p-2 bg-white rounded flex-shrink-0 shadow-lg">
+<svg class="w-24 h-24 text-black" fill="currentColor" viewbox="0 0 100 100">
+<!-- Corner finder 1 -->
+<rect fill="black" height="26" rx="2" width="26" x="5" y="5"></rect>
+<rect fill="white" height="18" width="18" x="9" y="9"></rect>
+<rect fill="black" height="10" width="10" x="13" y="13"></rect>
+<!-- Corner finder 2 -->
+<rect fill="black" height="26" rx="2" width="26" x="69" y="5"></rect>
+<rect fill="white" height="18" width="18" x="73" y="9"></rect>
+<rect fill="black" height="10" width="10" x="77" y="13"></rect>
+<!-- Corner finder 3 -->
+<rect fill="black" height="26" rx="2" width="26" x="5" y="69"></rect>
+<rect fill="white" height="18" width="18" x="9" y="73"></rect>
+<rect fill="black" height="10" width="10" x="13" y="77"></rect>
+<!-- Tactical payload patterns -->
+<rect height="6" width="6" x="36" y="10"></rect>
+<rect height="6" width="12" x="48" y="10"></rect>
+<rect height="8" width="8" x="36" y="24"></rect>
+<rect height="6" width="10" x="50" y="26"></rect>
+<rect height="6" width="18" x="10" y="38"></rect>
+<rect height="6" width="6" x="36" y="38"></rect>
+<rect height="14" width="14" x="46" y="42"></rect>
+<rect height="6" width="14" x="68" y="38"></rect>
+<rect height="8" width="8" x="86" y="42"></rect>
+<rect height="8" width="8" x="12" y="52"></rect>
+<rect height="6" width="12" x="28" y="50"></rect>
+<rect height="8" width="12" x="68" y="52"></rect>
+<rect height="8" width="8" x="38" y="64"></rect>
+<rect height="12" width="6" x="54" y="68"></rect>
+<rect height="8" width="8" x="68" y="72"></rect>
+<rect height="14" width="10" x="84" y="68"></rect>
+<rect height="8" width="14" x="38" y="80"></rect>
+<rect height="6" width="16" x="70" y="86"></rect>
+</svg>
+</div>
+<div class="space-y-1">
+<h5 class="font-telemetry-md text-telemetry-md font-bold text-on-surface">
+              Мгновенный экспорт
+            </h5>
+<p class="font-body-sm text-body-sm text-on-surface-variant leading-tight">
+              Сканируйте приложением sing-box, Streisand или v2rayNG для синхронизации каскада 1➔2➔3.
+            </p>
+<div class="pt-1 font-badge-code text-badge-code text-secondary flex items-center gap-1 font-mono">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary-container"></span>
+<span>Wi-Fi Remote: 192.168.1.144:9090</span>
+</div>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- ========================================================================= -->
+<!-- LIGHTWEIGHT INLINE JAVASCRIPT: MICRO-INTERACTIONS & FAILOVER TEST         -->
+<!-- ========================================================================= -->
+<script>
+    // Live session timer simulation
+    let seconds = 22, minutes = 19, hours = 4;
+    const timerEl = document.getElementById('sessionTimer');
+    setInterval(() => {
+      seconds++;
+      if (seconds >= 60) { seconds = 0; minutes++; }
+      if (minutes >= 60) { minutes = 0; hours++; }
+      const format = (n) => n.toString().padStart(2, '0');
+      timerEl.textContent = `${format(hours)}:${format(minutes)}:${format(seconds)}`;
+    }, 1000);
+
+    // Tactical Shield Orb Toggle
+    const shieldBtn = document.getElementById('mainShieldBtn');
+    let isShieldActive = true;
+    shieldBtn.addEventListener('click', () => {
+      isShieldActive = !isShieldActive;
+      if (isShieldActive) {
+        shieldBtn.classList.remove('border-error', 'crimson-glow');
+        shieldBtn.classList.add('border-primary-container', 'shield-glow');
+        shieldBtn.querySelector('.material-symbols-outlined').textContent = 'shield';
+        shieldBtn.querySelector('.material-symbols-outlined').style.color = '#00F59B';
+        shieldBtn.querySelector('.font-badge-code').textContent = 'ЩИТ АКТИВЕН';
+        shieldBtn.querySelector('.font-telemetry-sm').textContent = 'ЗАЩИЩЕНО';
+      } else {
+        shieldBtn.classList.remove('border-primary-container', 'shield-glow');
+        shieldBtn.classList.add('border-error', 'crimson-glow');
+        shieldBtn.querySelector('.material-symbols-outlined').textContent = 'shield_moon';
+        shieldBtn.querySelector('.material-symbols-outlined').style.color = '#FF3B5C';
+        shieldBtn.querySelector('.font-badge-code').textContent = 'ЩИТ ОТКЛЮЧЕН';
+        shieldBtn.querySelector('.font-telemetry-sm').textContent = 'УЯЗВИМО';
+      }
+    });
+
+    // Hardware style toggles interactive state
+    document.querySelectorAll('.toggle-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const state = btn.getAttribute('data-state');
+        const indicator = btn.querySelector('span');
+        if (state === 'on') {
+          btn.setAttribute('data-state', 'off');
+          btn.classList.remove('bg-primary-container', 'justify-end');
+          btn.classList.add('bg-surface-variant', 'justify-start');
+          indicator.classList.remove('text-primary-container');
+          indicator.classList.add('text-on-surface-variant');
+          indicator.textContent = 'OFF';
+        } else {
+          btn.setAttribute('data-state', 'on');
+          btn.classList.add('bg-primary-container', 'justify-end');
+          btn.classList.remove('bg-surface-variant', 'justify-start');
+          indicator.classList.add('text-primary-container');
+          indicator.classList.remove('text-on-surface-variant');
+          indicator.textContent = 'ON';
+        }
+      });
+    });
+
+    // Sandbox Failover Simulator Interactions
+    const node1 = document.getElementById('node1Card');
+    const node2 = document.getElementById('node2Card');
+    const statusText = document.getElementById('failoverStatusText');
+    const livePing = document.getElementById('liveGraphPing');
+    const node1Ping = document.getElementById('node1Ping');
+
+    // 1. Drop Node #1 simulation
+    document.getElementById('simDropNode1').addEventListener('click', () => {
+      node1.classList.remove('border-primary-container', 'shield-glow');
+      node1.classList.add('border-error', 'crimson-glow', 'opacity-60');
+      node1Ping.textContent = 'ТАЙМАУТ (СБОЙ)';
+      node1Ping.classList.replace('text-primary', 'text-error');
+
+      // Promote Node #2
+      node2.classList.remove('border-[#FFB020]', 'amber-glow');
+      node2.classList.add('border-primary-container', 'shield-glow');
+      
+      statusText.textContent = 'ПЕРЕКЛЮЧЕНО НА УЗЕЛ #2 • Задержка 12 мс • Потери 0';
+      statusText.classList.replace('text-primary', 'text-[#FFB020]');
+      livePing.textContent = '46 мс (Узел #2)';
+      livePing.classList.replace('text-primary-container', 'text-[#FFB020]');
+
+      setTimeout(() => {
+        // Reset after 4 seconds
+        node1.classList.remove('border-error', 'crimson-glow', 'opacity-60');
+        node1.classList.add('border-primary-container', 'shield-glow');
+        node1Ping.textContent = '18 мс [СТАБИЛЬНО]';
+        node1Ping.classList.replace('text-error', 'text-primary');
+
+        node2.classList.add('border-[#FFB020]', 'amber-glow');
+        node2.classList.remove('border-primary-container', 'shield-glow');
+
+        statusText.textContent = 'Время переключения: 12 мс • Потери TCP: 0';
+        statusText.classList.replace('text-[#FFB020]', 'text-primary');
+        livePing.textContent = '18 мс';
+        livePing.classList.replace('text-[#FFB020]', 'text-primary-container');
+      }, 4500);
+    });
+
+    // 2. High Lag simulation (+2200 ms)
+    document.getElementById('simLag').addEventListener('click', () => {
+      node1Ping.textContent = '2248 мс [LAG SPIKE]';
+      node1Ping.classList.replace('text-primary', 'text-[#FFB020]');
+      livePing.textContent = '2248 мс';
+      livePing.classList.replace('text-primary-container', 'text-[#FFB020]');
+      statusText.textContent = 'ПРЕДУПРЕЖДЕНИЕ: Детекция лага! Готовится прыжок...';
+
+      setTimeout(() => {
+        node1Ping.textContent = '18 мс [СТАБИЛЬНО]';
+        node1Ping.classList.replace('text-[#FFB020]', 'text-primary');
+        livePing.textContent = '18 мс';
+        livePing.classList.replace('text-[#FFB020]', 'text-primary-container');
+        statusText.textContent = 'Время переключения: 12 мс • Потери TCP: 0';
+      }, 3000);
+    });
+
+    // 3. Force Jump to Node 2
+    document.getElementById('simForceJump').addEventListener('click', () => {
+      statusText.textContent = 'ПРИНУДИТЕЛЬНЫЙ ПЕРЕХОД: Амстердам [Hysteria2] Активен';
+      livePing.textContent = '46 мс (Ручной выбор)';
+      setTimeout(() => {
+        statusText.textContent = 'Время переключения: 12 мс • Потери TCP: 0';
+        livePing.textContent = '18 мс';
+      }, 3000);
+    });
+  </script>
+</body></html>

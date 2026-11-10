@@ -1,0 +1,580 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ==========================================================================
+   Дизайн-система: Obsidian Tactical Telemetry (AegisMesh VPN — Stitch MCP)
+   Mobile-First (320px+) + Desktop Command Center (1024px+)
+   ========================================================================== */
+
+:root {
+  --bg-obsidian: #070a0f;
+  --bg-card: #0d131e;
+  --bg-elevated: #161c27;
+  --bg-hover: #242a36;
+  --border-subtle: #3b4a3f;
+  --border-highlight: rgba(0, 245, 155, 0.45);
+  --text-primary: #dde2f2;
+  --text-secondary: #b9cbbd;
+  --text-muted: #849588;
+  --emerald-shield: #00f59b;
+  --emerald-glow: rgba(0, 245, 155, 0.18);
+  --amber-failover: #ffb020;
+  --amber-glow: rgba(255, 176, 32, 0.18);
+  --ruby-killswitch: #ff3b5c;
+  --ruby-glow: rgba(255, 59, 92, 0.2);
+  --cyan-mobile: #00d2ff;
+  --font-display: 'Space Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-sans: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', Consolas, monospace;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 12px;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  background-color: #070a0f;
+  color: #dde2f2;
+  background-image:
+    linear-gradient(to right, rgba(142, 158, 181, 0.03) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(142, 158, 181, 0.03) 1px, transparent 1px);
+  background-size: 32px 32px;
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+  min-height: 100vh;
+}
+
+.safe-top-header {
+  padding-top: max(0.625rem, env(safe-area-inset-top, 0px));
+}
+
+.shield-glow {
+  box-shadow:
+    0 0 35px -5px rgba(0, 245, 155, 0.35),
+    inset 0 0 20px rgba(0, 245, 155, 0.12);
+}
+
+.amber-glow {
+  box-shadow:
+    0 0 24px -4px rgba(255, 176, 32, 0.3),
+    inset 0 0 12px rgba(255, 176, 32, 0.08);
+}
+
+.cyan-glow {
+  box-shadow:
+    0 0 24px -4px rgba(0, 210, 255, 0.3),
+    inset 0 0 12px rgba(0, 210, 255, 0.08);
+}
+
+.crimson-glow {
+  box-shadow: 0 0 25px -3px rgba(255, 59, 92, 0.45);
+}
+
+@keyframes pulse-radar {
+  0% {
+    transform: scale(0.96);
+    opacity: 0.8;
+  }
+  50% {
+    transform: scale(1.04);
+    opacity: 0.3;
+  }
+  100% {
+    transform: scale(0.96);
+    opacity: 0.8;
+  }
+}
+
+.animate-radar {
+  animation: pulse-radar 3s ease-in-out infinite;
+}
+
+@keyframes conduit-flow {
+  0% {
+    stroke-dashoffset: 40;
+  }
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+.conduit-stream {
+  stroke-dasharray: 6 6;
+  animation: conduit-flow 1.2s linear infinite;
+}
+
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: #080e19;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #242a36;
+  border-radius: 2px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #3b4a3f;
+}
+
+/* Макет приложения: на мобильных (и в мини-виджете) колонка с нижним баром, на ПК — боковая панель */
+.app-shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 80% 0%, rgba(0, 245, 155, 0.06), transparent 40%),
+    radial-gradient(circle at 10% 90%, rgba(0, 210, 255, 0.05), transparent 40%),
+    var(--bg-obsidian);
+  padding-bottom: calc(76px + env(safe-area-inset-bottom, 0px));
+}
+
+.app-shell.mobile-preview-mode {
+  max-width: 412px;
+  margin: 12px auto;
+  min-height: calc(100vh - 24px);
+  border: 1px solid rgba(0, 210, 255, 0.35);
+  border-radius: 24px;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.75);
+  overflow: hidden;
+  position: relative;
+}
+
+/* Верхняя тактическая панель */
+.top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  background: rgba(14, 20, 31, 0.88);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border-subtle);
+  position: sticky;
+  top: 0;
+  z-index: 40;
+}
+
+.brand-block {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.brand-logo {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, rgba(0, 245, 155, 0.2), rgba(0, 210, 255, 0.15));
+  border: 1px solid var(--border-highlight);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--emerald-shield);
+  flex-shrink: 0;
+}
+
+.brand-title {
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.brand-subtitle {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.top-bar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* Основная рабочая область и навигация */
+.workspace-layout {
+  display: flex;
+  flex: 1;
+  width: 100%;
+  max-width: 1440px;
+  margin: 0 auto;
+}
+
+.side-nav {
+  display: none;
+}
+
+.main-content {
+  flex: 1;
+  padding: 16px;
+  width: 100%;
+  max-width: 100%;
+}
+
+/* Нижний мобильный бар (Thumb Zone Bottom Tab Bar >= 68px) */
+.bottom-tab-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: calc(68px + env(safe-area-inset-bottom, 0px));
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  background: rgba(10, 15, 24, 0.96);
+  backdrop-filter: blur(16px);
+  border-top: 1px solid var(--border-subtle);
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  z-index: 50;
+}
+
+.app-shell.mobile-preview-mode .bottom-tab-bar {
+  position: sticky;
+  bottom: 0;
+}
+
+.tab-btn {
+  appearance: none;
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: 48px;
+  font-family: var(--font-sans);
+  font-size: 10.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color 0.18s ease, background-color 0.18s ease;
+  padding: 4px 2px;
+}
+
+.tab-btn.active {
+  color: var(--emerald-shield);
+  background: rgba(0, 245, 155, 0.07);
+}
+
+/* Десктопный режим Command Center (от 980px, если не включён мобильный предпросмотр) */
+@media (min-width: 980px) {
+  .app-shell:not(.mobile-preview-mode) {
+    padding-bottom: 0;
+  }
+
+  .app-shell:not(.mobile-preview-mode) .side-nav {
+    display: flex;
+    flex-direction: column;
+    width: 260px;
+    flex-shrink: 0;
+    background: rgba(14, 20, 31, 0.65);
+    border-right: 1px solid var(--border-subtle);
+    padding: 18px 12px;
+    gap: 6px;
+  }
+
+  .app-shell:not(.mobile-preview-mode) .bottom-tab-bar {
+    display: none;
+  }
+
+  .app-shell:not(.mobile-preview-mode) .main-content {
+    padding: 22px 26px;
+  }
+}
+
+.side-nav-btn {
+  appearance: none;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  min-height: 48px;
+  font-family: var(--font-sans);
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.16s ease;
+}
+
+.side-nav-btn:hover {
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+}
+
+.side-nav-btn.active {
+  background: var(--emerald-glow);
+  border-color: var(--border-highlight);
+  color: var(--emerald-shield);
+}
+
+/* Карточки, сетки и кнопки */
+.grid-2 {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+
+.grid-3 {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+@media (min-width: 768px) {
+  .app-shell:not(.mobile-preview-mode) .grid-2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .app-shell:not(.mobile-preview-mode) .grid-3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.card-highlight {
+  border-color: var(--border-highlight);
+  box-shadow: 0 0 28px rgba(0, 245, 155, 0.07);
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.card-title {
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Тактическая кнопка питания Щита */
+.shield-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 20px 14px;
+}
+
+.shield-orb-btn {
+  width: 144px;
+  height: 144px;
+  border-radius: 50%;
+  border: 2px solid var(--border-subtle);
+  background: radial-gradient(circle, #162236 0%, #0b101b 100%);
+  color: var(--text-primary);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.24s ease;
+  margin-bottom: 14px;
+}
+
+.shield-orb-btn.connected {
+  border-color: var(--emerald-shield);
+  box-shadow: 0 0 36px rgba(0, 245, 155, 0.28), inset 0 0 22px rgba(0, 245, 155, 0.16);
+  color: var(--emerald-shield);
+}
+
+.shield-orb-btn.switching {
+  border-color: var(--amber-failover);
+  box-shadow: 0 0 36px var(--amber-glow);
+  color: var(--amber-failover);
+}
+
+.shield-orb-btn.locked {
+  border-color: var(--ruby-killswitch);
+  box-shadow: 0 0 36px var(--ruby-glow);
+  color: var(--ruby-killswitch);
+}
+
+/* Универсальные кнопки (Touch-first >= 44px) */
+.btn {
+  appearance: none;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  border-radius: var(--radius-sm);
+  padding: 9px 14px;
+  min-height: 42px;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn:hover:not(:disabled) {
+  background: var(--bg-hover);
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background: var(--emerald-shield);
+  color: #04130d;
+  border-color: var(--emerald-shield);
+  font-weight: 700;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: #1fffa9;
+}
+
+.btn-amber {
+  background: rgba(255, 176, 32, 0.15);
+  color: var(--amber-failover);
+  border-color: rgba(255, 176, 32, 0.45);
+}
+
+.btn-danger {
+  background: rgba(255, 59, 92, 0.15);
+  color: var(--ruby-killswitch);
+  border-color: rgba(255, 59, 92, 0.45);
+}
+
+.btn-sm {
+  min-height: 34px;
+  padding: 5px 10px;
+  font-size: 12px;
+}
+
+/* Бейджи и моноширинная телеметрия */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 600;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-elevated);
+}
+
+.badge-emerald {
+  color: var(--emerald-shield);
+  border-color: rgba(0, 245, 155, 0.4);
+  background: rgba(0, 245, 155, 0.1);
+}
+
+.badge-amber {
+  color: var(--amber-failover);
+  border-color: rgba(255, 176, 32, 0.4);
+  background: rgba(255, 176, 32, 0.12);
+}
+
+.badge-ruby {
+  color: var(--ruby-killswitch);
+  border-color: rgba(255, 59, 92, 0.4);
+  background: rgba(255, 59, 92, 0.12);
+}
+
+.mono {
+  font-family: var(--font-mono);
+}
+
+/* Поля ввода и формы */
+.input,
+.textarea,
+.select {
+  width: 100%;
+  background: #080d16;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  padding: 10px 12px;
+  min-height: 44px;
+  font-family: var(--font-sans);
+  font-size: 13.5px;
+}
+
+.textarea {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  min-height: 110px;
+  resize: vertical;
+}
+
+.input:focus,
+.textarea:focus,
+.select:focus {
+  outline: none;
+  border-color: var(--emerald-shield);
+}
+
+/* Каскадная цепочка 1 -> 2 -> 3 */
+.cascade-chain {
+  display: flex;
+  align-items: stretch;
+  gap: 10px;
+  overflow-x: auto;
+  padding-bottom: 6px;
+}
+
+.cascade-step {
+  min-width: 185px;
+  flex: 1;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.cascade-step.active {
+  border-color: var(--emerald-shield);
+  background: rgba(0, 245, 155, 0.08);
+}
+
+.cascade-step.down {
+  border-color: rgba(255, 59, 92, 0.5);
+  background: rgba(255, 59, 92, 0.07);
+}

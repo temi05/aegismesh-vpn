@@ -1,0 +1,45 @@
+{
+  "name": "aegismesh-vpn",
+  "version": "3.5.0",
+  "description": "Кибербезопасный мультипротокольный VPN-клиент с умной автозаменой серверов (Auto-Failover), Kill Switch, Split Tunneling и мобильным режимом",
+  "main": "dist/electron/electron/main.js",
+  "scripts": {
+    "dev:vite": "vite --host",
+    "dev:electron": "wait-on tcp:5173 && cross-env NODE_ENV=development electron ./dist/electron/electron/main.js",
+    "build:backend": "tsc -p tsconfig.node.json",
+    "dev": "npm run build:backend && concurrently -k \"npm:dev:vite\" \"tsx watch --tsconfig tsconfig.node.json scripts/watch-electron.ts\"",
+    "dev:server": "tsx src/backend/standaloneServer.ts",
+    "build": "tsc -p tsconfig.json --noEmit && vite build && tsc -p tsconfig.node.json",
+    "start": "npm run build && electron .",
+    "mobile:sync": "vite build && cap sync",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@capacitor/android": "^6.2.3",
+    "@capacitor/core": "^6.2.0",
+    "lucide-react": "^0.468.0",
+    "qrcode": "^1.5.4",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^6.2.0",
+    "@types/node": "^22.10.2",
+    "@types/qrcode": "^1.5.5",
+    "@types/react": "^18.3.18",
+    "@types/react-dom": "^18.3.5",
+    "@vitejs/plugin-react": "^4.3.4",
+    "autoprefixer": "^10.6.2",
+    "concurrently": "^9.1.0",
+    "cross-env": "^7.0.3",
+    "electron": "^33.2.1",
+    "postcss": "^8.5.32",
+    "tailwindcss": "^3.4.19",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "vite": "^6.0.5",
+    "vitest": "^2.1.8",
+    "wait-on": "^8.0.1"
+  }
+}

@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="ru"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+<title>Aegis // Mesh v2 - Tactical VPN</title>
+<!-- Material Symbols Outlined -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Typography -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&amp;family=Manrope:wght@400;500;600;700&amp;family=Space+Grotesk:wght@500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "primary-container": "#00f59b",
+            "inverse-on-surface": "#2b303d",
+            "primary": "#cdffdc",
+            "tertiary-container": "#ffcacb",
+            "outline": "#849588",
+            "surface-dim": "#0d131e",
+            "tertiary": "#fff0f0",
+            "primary-fixed-dim": "#00e38f",
+            "inverse-surface": "#dde2f2",
+            "on-secondary-fixed": "#001f28",
+            "on-error": "#690005",
+            "on-tertiary-fixed-variant": "#920028",
+            "on-tertiary-container": "#bc0036",
+            "secondary-fixed-dim": "#47d6ff",
+            "surface-container": "#1a202b",
+            "surface": "#0d131e",
+            "secondary-fixed": "#b6ebff",
+            "on-secondary-fixed-variant": "#004e60",
+            "on-primary-fixed": "#002111",
+            "error": "#ffb4ab",
+            "surface-bright": "#333946",
+            "on-surface-variant": "#b9cbbd",
+            "background": "#0d131e",
+            "on-surface": "#dde2f2",
+            "on-primary-fixed-variant": "#005231",
+            "primary-fixed": "#53ffab",
+            "on-primary": "#003920",
+            "tertiary-fixed-dim": "#ffb3b6",
+            "inverse-primary": "#006d42",
+            "surface-variant": "#2f3541",
+            "error-container": "#93000a",
+            "secondary": "#a5e7ff",
+            "surface-container-lowest": "#080e19",
+            "on-tertiary-fixed": "#40000c",
+            "tertiary-fixed": "#ffdada",
+            "surface-tint": "#00e38f",
+            "surface-container-high": "#242a36",
+            "surface-container-highest": "#2f3541",
+            "on-error-container": "#ffdad6",
+            "on-secondary-container": "#00566a",
+            "on-primary-container": "#006b41",
+            "secondary-container": "#00d2ff",
+            "on-background": "#dde2f2",
+            "on-tertiary": "#68001a",
+            "on-secondary": "#003543",
+            "surface-container-low": "#161c27",
+            "outline-variant": "#3b4a3f"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.125rem",
+            "lg": "0.25rem",
+            "xl": "0.5rem",
+            "full": "0.75rem"
+          },
+          "spacing": {
+            "margin": "1rem",
+            "space-xl": "2rem",
+            "space-sm": "0.5rem",
+            "space-xs": "0.25rem",
+            "margin-desktop": "2rem",
+            "space-md": "0.75rem",
+            "space-lg": "1.25rem",
+            "gutter": "1rem",
+            "gutter-desktop": "1.5rem"
+          },
+          "fontFamily": {
+            "telemetry-md": ["JetBrains Mono"],
+            "telemetry-lg": ["JetBrains Mono"],
+            "headline-md": ["Space Grotesk"],
+            "display-xl": ["Space Grotesk"],
+            "display-xl-mobile": ["Space Grotesk"],
+            "telemetry-sm": ["JetBrains Mono"],
+            "body-lg": ["Manrope"],
+            "badge-code": ["JetBrains Mono"],
+            "body-md": ["Manrope"],
+            "headline-lg": ["Space Grotesk"],
+            "body-sm": ["Manrope"],
+            "headline-lg-mobile": ["Space Grotesk"]
+          },
+          "fontSize": {
+            "telemetry-md": ["0.875rem", { "lineHeight": "1.25rem", "letterSpacing": "0", "fontWeight": "500" }],
+            "telemetry-lg": ["1.125rem", { "lineHeight": "1.5rem", "letterSpacing": "-0.02em", "fontWeight": "600" }],
+            "headline-md": ["1.25rem", { "lineHeight": "1.75rem", "letterSpacing": "0.01em", "fontWeight": "600" }],
+            "display-xl": ["3rem", { "lineHeight": "3.5rem", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+            "display-xl-mobile": ["2rem", { "lineHeight": "2.5rem", "letterSpacing": "-0.01em", "fontWeight": "700" }],
+            "telemetry-sm": ["0.75rem", { "lineHeight": "1rem", "letterSpacing": "0.04em", "fontWeight": "400" }],
+            "body-lg": ["1rem", { "lineHeight": "1.5rem", "fontWeight": "500" }],
+            "badge-code": ["0.6875rem", { "lineHeight": "0.875rem", "letterSpacing": "0.06em", "fontWeight": "700" }],
+            "body-md": ["0.875rem", { "lineHeight": "1.25rem", "fontWeight": "400" }],
+            "headline-lg": ["2rem", { "lineHeight": "2.5rem", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+            "body-sm": ["0.75rem", { "lineHeight": "1rem", "fontWeight": "400" }],
+            "headline-lg-mobile": ["1.5rem", { "lineHeight": "2rem", "letterSpacing": "0", "fontWeight": "600" }]
+          }
+        }
+      }
+    }
+  </script>
+<style>
+    @keyframes tactical-pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.35; transform: scale(1.15); }
+    }
+    .animate-tactical-pulse {
+      animation: tactical-pulse 1.8s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+    .glow-emerald {
+      box-shadow: 0 0 16px -2px rgba(0, 245, 155, 0.25), inset 0 0 12px rgba(0, 245, 155, 0.05);
+    }
+    .glow-dot {
+      box-shadow: 0 0 8px #00f59b;
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface-container-lowest text-on-surface antialiased selection:bg-primary-container selection:text-on-primary-fixed min-h-screen flex justify-center pb-20">
+<!-- Mobile Viewport Canvas Container -->
+<div class="w-full max-w-[420px] min-h-screen flex flex-col relative px-margin pt-16">
+<!-- 1. Top Bar / App Header (Mapped directly to Shared Components JSON) -->
+<header class="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-margin h-14 bg-surface-container-lowest/95 backdrop-blur-md">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary-container text-xl" data-icon="shield">shield</span>
+<span class="font-headline-md text-headline-md font-bold tracking-widest text-primary-container">AEGIS // MESH</span>
+<span class="font-badge-code text-badge-code text-secondary-container bg-secondary-container/10 px-1 py-0.5 rounded border border-secondary-container/30">v2</span>
+</div>
+<!-- Latency & Signal Node Readout -->
+<div class="flex items-center gap-1.5 bg-surface-container-low px-2 py-1 rounded border border-outline-variant/30">
+<span class="w-1.5 h-1.5 rounded-full bg-primary-container animate-tactical-pulse glow-dot"></span>
+<span class="font-telemetry-sm text-telemetry-sm text-primary-container font-medium tracking-tight">34 ms</span>
+<span class="material-symbols-outlined text-on-surface-variant text-base" data-icon="sensors">sensors</span>
+</div>
+</header>
+<!-- Main Operational Workspace -->
+<main class="flex flex-col gap-3.5 mt-1 flex-1">
+<!-- 2. Upper Main Hero Card: Честный статус подключения -->
+<section class="bg-surface-container-low rounded-xl border border-primary-container/40 p-space-md glow-emerald flex flex-col gap-3 relative overflow-hidden">
+<!-- Top Status Badge -->
+<div class="flex items-center justify-between">
+<div class="inline-flex items-center gap-2 bg-primary-container/10 border border-primary-container/40 px-2.5 py-1 rounded-full">
+<span class="w-2 h-2 rounded-full bg-primary-container animate-tactical-pulse glow-dot"></span>
+<span class="font-badge-code text-badge-code text-primary-container font-bold tracking-wide">
+              VPN РАБОТАЕТ • ТУННЕЛЬ ПРОВЕРЕН
+            </span>
+</div>
+<span class="font-telemetry-sm text-telemetry-sm text-on-surface-variant flex items-center gap-1">
+<span class="material-symbols-outlined text-sm text-primary-container" data-icon="verified_user">verified_user</span>
+            VLESS-XTLS
+          </span>
+</div>
+<!-- Server Title -->
+<div>
+<div class="font-telemetry-sm text-telemetry-sm text-on-surface-variant">Активный защищённый узел</div>
+<div class="font-headline-lg-mobile text-headline-lg-mobile font-bold text-on-surface tracking-tight flex items-center gap-2 mt-0.5">
+<span class="text-xl">🇳🇱</span>
+<span>Нидерланды • VLESS Reality</span>
+</div>
+</div>
+<!-- 3 Telemetry Metrics Grid / Verification Bar -->
+<div class="grid grid-cols-3 gap-1.5 bg-surface-container-lowest/80 p-2 rounded-lg border border-outline-variant/20">
+<!-- Metric 1: IP -->
+<div class="flex flex-col">
+<span class="font-telemetry-sm text-telemetry-sm text-on-surface-variant text-[10px] leading-tight">Внешний IP</span>
+<span class="font-telemetry-sm text-telemetry-sm text-on-surface font-semibold truncate mt-0.5">94.142.xx.xx</span>
+<span class="font-badge-code text-badge-code text-secondary-container text-[9px]">[NL] Защищён</span>
+</div>
+<!-- Metric 2: Ping -->
+<div class="flex flex-col border-l border-outline-variant/20 pl-1.5">
+<span class="font-telemetry-sm text-telemetry-sm text-on-surface-variant text-[10px] leading-tight">Пинг</span>
+<div class="flex items-baseline gap-1 mt-0.5">
+<span class="font-telemetry-sm text-telemetry-sm text-primary-container font-bold">34</span>
+<span class="font-telemetry-sm text-telemetry-sm text-on-surface-variant text-[10px]">мс</span>
+</div>
+<span class="font-badge-code text-badge-code text-primary-container text-[9px]">Стабилен</span>
+</div>
+<!-- Metric 3: Speed -->
+<div class="flex flex-col border-l border-outline-variant/20 pl-1.5">
+<span class="font-telemetry-sm text-telemetry-sm text-on-surface-variant text-[10px] leading-tight">Скорость трафика</span>
+<span class="font-telemetry-sm text-telemetry-sm text-on-surface font-medium truncate mt-0.5 text-[11px]">↓ 42.8 • ↑ 11.4</span>
+<span class="font-badge-code text-badge-code text-on-surface-variant text-[9px]">Мбит/с</span>
+</div>
+</div>
+<!-- Action Area: Session Timer & High-Contrast Disconnect Button -->
+<div class="flex items-center gap-2 pt-0.5">
+<!-- Live Session Timer Pill -->
+<div class="flex-1 bg-surface-container-lowest border border-outline-variant/30 rounded-lg px-2.5 py-2 flex flex-col justify-center">
+<span class="font-telemetry-sm text-telemetry-sm text-on-surface-variant text-[10px]">Время сессии</span>
+<div class="flex items-center gap-1.5 mt-0.5">
+<span class="material-symbols-outlined text-xs text-secondary-container" data-icon="timer">timer</span>
+<span class="font-telemetry-md text-telemetry-md font-bold text-on-surface tracking-wider">00:18:42</span>
+</div>
+</div>
+<!-- Terminate Action Button -->
+<button class="flex-1 bg-error-container/20 border border-error/50 hover:bg-error-container/30 active:scale-95 duration-100 ease-out text-on-surface rounded-lg px-3 py-2 flex items-center justify-center gap-1.5 group transition-colors">
+<span class="material-symbols-outlined text-error text-lg group-hover:rotate-90 transition-transform" data-icon="power_settings_new">power_settings_new</span>
+<span class="font-telemetry-sm text-telemetry-sm font-bold text-error tracking-wide">ОТКЛЮЧИТЬ VPN</span>
+</button>
+</div>
+</section>
+<!-- 3. Compact Subscription Pill Banner -->
+<section class="bg-surface-container-low/80 border border-outline-variant/25 rounded-lg px-3 py-2 flex items-center justify-between">
+<div class="flex items-center gap-2 min-w-0">
+<span class="material-symbols-outlined text-primary-container text-base flex-shrink-0" data-icon="workspace_premium">workspace_premium</span>
+<div class="truncate">
+<p class="font-telemetry-sm text-telemetry-sm text-on-surface font-medium truncate leading-tight">
+              Подписка активна • 5 рабочих серверов • Трафик: безлимит
+            </p>
+</div>
+</div>
+<button class="p-1 rounded hover:bg-surface-container text-on-surface-variant hover:text-primary-container active:scale-90 transition-all flex-shrink-0 ml-1" title="Синхронизировать">
+<span class="material-symbols-outlined text-base" data-icon="sync">sync</span>
+</button>
+</section>
+<!-- 4. Dedicated Section: Подключённый VPN и очередь автозамены -->
+<section class="flex flex-col gap-2">
+<div class="flex items-center justify-between px-0.5">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-sm text-on-surface-variant" data-icon="dns">dns</span>
+<h2 class="font-telemetry-sm text-telemetry-sm uppercase font-semibold text-on-surface-variant tracking-wider">
+              Подключённый VPN и очередь автозамены
+            </h2>
+</div>
+<span class="font-badge-code text-badge-code text-on-surface-variant">AUTO-FAILOVER [ON]</span>
+</div>
+<!-- Server Queue List (Items ~60px high for ultra-dense glanceability) -->
+<div class="flex flex-col gap-1.5">
+<!-- Item 1: Active Connected Server -->
+<article class="h-[62px] bg-surface-container-low border border-primary-container/70 rounded-lg px-3 flex items-center justify-between glow-emerald relative">
+<div class="flex items-center gap-2.5">
+<span class="text-xl">🇳🇱</span>
+<div class="flex flex-col">
+<div class="flex items-center gap-1.5">
+<span class="font-body-md text-body-md font-semibold text-on-surface">Нидерланды #1</span>
+<span class="font-badge-code text-badge-code bg-primary-container/15 text-primary-container border border-primary-container/30 px-1 py-0.2 rounded">СЕЙЧАС ПОДКЛЮЧЕН</span>
+</div>
+<div class="flex items-center gap-2 mt-0.5">
+<span class="font-telemetry-sm text-telemetry-sm text-on-surface-variant text-[11px]">VLESS</span>
+<span class="text-[10px] text-outline-variant">•</span>
+<span class="font-telemetry-sm text-telemetry-sm text-primary-container font-medium text-[11px] flex items-center gap-0.5">
+<span class="w-1 h-1 rounded-full bg-primary-container inline-block"></span>
+                    34 мс
+                  </span>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-primary-container text-xl" data-icon="check_circle" data-weight="fill" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+</div>
+</article>
+<!-- Item 2: Reserve #1 (Standby) -->
+<article class="h-[60px] bg-surface-container-low border border-outline-variant/30 rounded-lg px-3 flex items-center justify-between hover:border-outline-variant/50 transition-colors">
+<div class="flex items-center gap-2.5">
+<span class="text-xl">🇩🇪</span>
+<div class="flex flex-col">
+<div class="flex items-center gap-1.5">
+<span class="font-body-md text-body-md font-medium text-on-surface">Германия #2</span>
+<span class="font-badge-code text-badge-code bg-amber-500/10 text-amber-400 border border-amber-500/30 px-1 py-0.2 rounded">РЕЗЕРВ #1 (при сбое)</span>
+</div>
+<div class="flex items-center gap-2 mt-0.5">
+<span class="font-telemetry-sm text-telemetry-sm text-on-surface-variant text-[11px]">VLESS</span>
+<span class="text-[10px] text-outline-variant">•</span>
+<span class="font-telemetry-sm text-telemetry-sm text-on-surface-variant text-[11px]">48 мс</span>
+</div>
+</div>
+</div>
+<button class="bg-surface-container border border-outline-variant/40 hover:border-primary-container/50 hover:text-primary-container active:scale-95 transition-all text-on-surface font-telemetry-sm text-telemetry-sm text-[11px] px-2.5 py-1 rounded">
+              Подключить
+            </button>
+</article>
+<!-- Item 3: Reserve #2 (Standby) -->
+<article class="h-[60px] bg-surface-container-low border border-outline-variant/30 rounded-lg px-3 flex items-center justify-between hover:border-outline-variant/50 transition-colors">
+<div class="flex items-center gap-2.5">
+<span class="text-xl">🇫🇮</span>
+<div class="flex flex-col">
+<div class="flex items-center gap-1.5">
+<span class="font-body-md text-body-md font-medium text-on-surface">Финляндия #3</span>
+<span class="font-badge-code text-badge-code bg-secondary-container/10 text-secondary-container border border-secondary-container/30 px-1 py-0.2 rounded">РЕЗЕРВ #2</span>
+</div>
+<div class="flex items-center gap-2 mt-0.5">
+<span class="font-telemetry-sm text-telemetry-sm text-on-surface-variant text-[11px]">HY2</span>
+<span class="text-[10px] text-outline-variant">•</span>
+<span class="font-telemetry-sm text-telemetry-sm text-on-surface-variant text-[11px]">62 мс</span>
+</div>
+</div>
+</div>
+<button class="bg-surface-container border border-outline-variant/40 hover:border-primary-container/50 hover:text-primary-container active:scale-95 transition-all text-on-surface font-telemetry-sm text-telemetry-sm text-[11px] px-2.5 py-1 rounded">
+              Подключить
+            </button>
+</article>
+<!-- Collapsed Row: Unavailable / Offline Nodes -->
+<button class="w-full h-8 bg-surface-container-lowest border border-dashed border-outline-variant/20 rounded flex items-center justify-center gap-1 text-on-surface-variant hover:text-on-surface hover:border-outline-variant/40 active:scale-98 transition-all">
+<span class="font-telemetry-sm text-telemetry-sm text-[11px] text-on-surface-variant">Скрыто недоступных серверов: 1</span>
+<span class="material-symbols-outlined text-sm text-on-surface-variant" data-icon="keyboard_arrow_down">keyboard_arrow_down</span>
+</button>
+</div>
+</section>
+</main>
+<!-- 5. Fixed Bottom Navigation Bar (Directly from Shared Components JSON) -->
+<!-- Active Destination Logic: Page is the main VPN status/control screen, so label "VPN" is active -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-space-xs h-16 bg-surface-container-lowest/95 backdrop-blur-md">
+<!-- Tab 1: VPN (Active) -->
+<a class="flex flex-col items-center justify-center text-primary-container dark:text-primary-container border-t-2 border-primary-container py-1 flex-1 active:scale-95 duration-75" href="#vpn">
+<span class="material-symbols-outlined text-xl" data-icon="vpn_lock" data-weight="fill" style="font-variation-settings: 'FILL' 1;">vpn_lock</span>
+<span class="font-telemetry-sm text-telemetry-sm font-medium tracking-tight mt-0.5">VPN</span>
+</a>
+<!-- Tab 2: Мои ключи (Inactive) -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-surface-variant opacity-60 py-1 flex-1 hover:text-primary-fixed hover:opacity-100 transition-opacity duration-150 active:scale-95 duration-75" href="#keys">
+<span class="material-symbols-outlined text-xl" data-icon="key">key</span>
+<span class="font-telemetry-sm text-telemetry-sm font-medium tracking-tight mt-0.5">Мои ключи</span>
+</a>
+<!-- Tab 3: Проверка IP (Inactive) -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-surface-variant opacity-60 py-1 flex-1 hover:text-primary-fixed hover:opacity-100 transition-opacity duration-150 active:scale-95 duration-75" href="#ip-check">
+<span class="material-symbols-outlined text-xl" data-icon="network_check">network_check</span>
+<span class="font-telemetry-sm text-telemetry-sm font-medium tracking-tight mt-0.5">Проверка IP</span>
+</a>
+<!-- Tab 4: Настройки (Inactive) -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-surface-variant opacity-60 py-1 flex-1 hover:text-primary-fixed hover:opacity-100 transition-opacity duration-150 active:scale-95 duration-75" href="#settings">
+<span class="material-symbols-outlined text-xl" data-icon="tune">tune</span>
+<span class="font-telemetry-sm text-telemetry-sm font-medium tracking-tight mt-0.5">Настройки</span>
+</a>
+</nav>
+</div>
+</body></html>

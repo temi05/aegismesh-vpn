@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="ru"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>AegisMesh VPN v2 // Tactical Telemetry</title>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&amp;family=Manrope:wght@400;500;600;700&amp;family=Space+Grotesk:wght@600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "surface-variant": "#2f3541",
+            "secondary-fixed": "#b6ebff",
+            "on-secondary-fixed-variant": "#004e60",
+            "on-tertiary-container": "#bc0036",
+            "on-secondary-fixed": "#001f28",
+            "on-tertiary-fixed": "#40000c",
+            "background": "#0d131e",
+            "on-error-container": "#ffdad6",
+            "on-primary-container": "#006b41",
+            "on-primary": "#003920",
+            "outline": "#849588",
+            "on-surface": "#dde2f2",
+            "error-container": "#93000a",
+            "secondary": "#a5e7ff",
+            "outline-variant": "#3b4a3f",
+            "surface-container-highest": "#2f3541",
+            "primary-fixed": "#53ffab",
+            "on-secondary-container": "#00566a",
+            "tertiary": "#fff0f0",
+            "on-secondary": "#003543",
+            "surface-tint": "#00e38f",
+            "on-primary-fixed-variant": "#005231",
+            "surface-dim": "#0d131e",
+            "on-tertiary-fixed-variant": "#920028",
+            "surface-container-low": "#161c27",
+            "inverse-surface": "#dde2f2",
+            "error": "#ffb4ab",
+            "secondary-fixed-dim": "#47d6ff",
+            "tertiary-fixed-dim": "#ffb3b6",
+            "inverse-on-surface": "#2b303d",
+            "surface-container-high": "#242a36",
+            "primary-container": "#00f59b",
+            "on-surface-variant": "#b9cbbd",
+            "primary": "#cdffdc",
+            "primary-fixed-dim": "#00e38f",
+            "on-background": "#dde2f2",
+            "surface-container-lowest": "#080e19",
+            "surface": "#0d131e",
+            "on-primary-fixed": "#002111",
+            "on-error": "#690005",
+            "surface-container": "#1a202b",
+            "tertiary-container": "#ffcacb",
+            "on-tertiary": "#68001a",
+            "inverse-primary": "#006d42",
+            "surface-bright": "#333946",
+            "tertiary-fixed": "#ffdada",
+            "secondary-container": "#00d2ff"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.125rem",
+            "lg": "0.25rem",
+            "xl": "0.5rem",
+            "full": "0.75rem"
+          },
+          "spacing": {
+            "gutter": "1rem",
+            "space-xl": "2rem",
+            "space-sm": "0.5rem",
+            "space-md": "0.75rem",
+            "margin-desktop": "2rem",
+            "gutter-desktop": "1.5rem",
+            "space-lg": "1.25rem",
+            "margin": "1rem",
+            "space-xs": "0.25rem"
+          },
+          "fontFamily": {
+            "telemetry-sm": ["JetBrains Mono"],
+            "telemetry-md": ["JetBrains Mono"],
+            "headline-md": ["Space Grotesk"],
+            "body-lg": ["Manrope"],
+            "telemetry-lg": ["JetBrains Mono"],
+            "headline-lg-mobile": ["Space Grotesk"],
+            "body-sm": ["Manrope"],
+            "display-xl": ["Space Grotesk"],
+            "body-md": ["Manrope"],
+            "badge-code": ["JetBrains Mono"],
+            "headline-lg": ["Space Grotesk"],
+            "display-xl-mobile": ["Space Grotesk"]
+          },
+          "fontSize": {
+            "telemetry-sm": ["0.75rem", { "lineHeight": "1rem", "letterSpacing": "0.04em", "fontWeight": "400" }],
+            "telemetry-md": ["0.875rem", { "lineHeight": "1.25rem", "letterSpacing": "0", "fontWeight": "500" }],
+            "headline-md": ["1.25rem", { "lineHeight": "1.75rem", "letterSpacing": "0.01em", "fontWeight": "600" }],
+            "body-lg": ["1rem", { "lineHeight": "1.5rem", "fontWeight": "500" }],
+            "telemetry-lg": ["1.125rem", { "lineHeight": "1.5rem", "letterSpacing": "-0.02em", "fontWeight": "600" }],
+            "headline-lg-mobile": ["1.5rem", { "lineHeight": "2rem", "letterSpacing": "0", "fontWeight": "600" }],
+            "body-sm": ["0.75rem", { "lineHeight": "1rem", "fontWeight": "400" }],
+            "display-xl": ["3rem", { "lineHeight": "3.5rem", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+            "body-md": ["0.875rem", { "lineHeight": "1.25rem", "fontWeight": "400" }],
+            "badge-code": ["0.6875rem", { "lineHeight": "0.875rem", "letterSpacing": "0.06em", "fontWeight": "700" }],
+            "headline-lg": ["2rem", { "lineHeight": "2.5rem", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+            "display-xl-mobile": ["2rem", { "lineHeight": "2.5rem", "letterSpacing": "-0.01em", "fontWeight": "700" }]
+          }
+        }
+      }
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      display: inline-block;
+      vertical-align: middle;
+      line-height: 1;
+    }
+    .tactical-grid-bg {
+      background-image: radial-gradient(rgba(142, 158, 181, 0.08) 1px, transparent 0);
+      background-size: 20px 20px;
+    }
+    .glow-amber-card {
+      box-shadow: 0 0 16px -2px rgba(255, 176, 32, 0.2), inset 0 0 12px rgba(255, 176, 32, 0.04);
+    }
+    .glow-primary-card {
+      box-shadow: 0 0 16px -2px rgba(0, 245, 155, 0.25), inset 0 0 12px rgba(0, 245, 155, 0.05);
+    }
+    .live-dot-pulse {
+      animation: pulse-emerald 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+    @keyframes pulse-emerald {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.35; transform: scale(0.85); }
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface-container-lowest text-on-surface font-body-md antialiased min-h-screen pb-24 pt-16 tactical-grid-bg flex justify-center selection:bg-primary-container selection:text-surface-container-lowest">
+<!-- Mobile Viewport Container -->
+<div class="w-full max-w-md px-margin flex flex-col space-y-3">
+<!-- 1. Хедер (TopAppBar) -->
+<header class="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-margin h-14 bg-surface-container-lowest/95 backdrop-blur-md">
+<div class="flex items-center space-x-2">
+<span class="material-symbols-outlined text-primary-container text-[20px]" data-icon="shield">shield</span>
+<span class="font-headline-md text-headline-md tracking-widest text-primary-container font-bold">AEGIS // MESH v2</span>
+</div>
+<div class="flex items-center space-x-2">
+<div class="flex items-center space-x-1.5 px-2 py-0.5 rounded border border-primary-container/30 bg-primary-container/10">
+<span class="w-2 h-2 rounded-full bg-primary-container live-dot-pulse"></span>
+<span class="font-telemetry-sm text-telemetry-sm text-primary-container font-semibold">48 ms</span>
+</div>
+<button aria-label="Сенсоры телеметрии" class="p-1.5 text-on-surface-variant hover:text-primary-container transition-colors">
+<span class="material-symbols-outlined text-[20px]" data-icon="sensors">sensors</span>
+</button>
+</div>
+</header>
+<!-- 2. Плашка-уведомление об автозамене -->
+<section class="rounded-xl border border-[#FFB020]/40 bg-surface-container-low p-3 glow-amber-card relative overflow-hidden">
+<div class="absolute -right-6 -bottom-6 w-20 h-20 bg-[#FFB020]/10 rounded-full blur-xl pointer-events-none"></div>
+<div class="flex items-start space-x-3">
+<div class="w-8 h-8 rounded bg-[#FFB020]/20 border border-[#FFB020]/60 flex items-center justify-center shrink-0 mt-0.5 text-[#FFB020]">
+<span class="material-symbols-outlined text-[20px]" data-icon="bolt">bolt</span>
+</div>
+<div class="flex-1 space-y-1">
+<div class="flex items-center justify-between">
+<span class="font-telemetry-md text-telemetry-md font-bold text-[#FFB020] flex items-center gap-1">
+              ⚡ СРАБОТАЛА АВТОЗАМЕНА
+            </span>
+<span class="font-badge-code text-badge-code px-1.5 py-0.5 rounded border border-[#FFB020]/50 text-[#FFB020] bg-[#FFB020]/10 font-bold">
+              FAILOVER
+            </span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface leading-tight">
+            Сервер #1 перестал отвечать <span class="text-[#FFB020]">➔</span> трафик за 0.2 сек переключён на <span class="text-secondary font-semibold">Резерв #2</span> без разрыва связи.
+          </p>
+<div class="pt-1.5 flex items-center justify-between border-t border-[#FFB020]/20">
+<span class="font-telemetry-sm text-telemetry-sm text-[#FFB020] font-medium flex items-center gap-1.5">
+<span class="w-1.5 h-1.5 rounded-full bg-[#FFB020]"></span>
+              0 пакетов потеряно • 0.2с failover
+            </span>
+<span class="font-telemetry-sm text-telemetry-sm text-on-surface-variant">AUTO-ROUTE</span>
+</div>
+</div>
+</div>
+</section>
+<!-- 3. Верхний главный блок «Честный статус подключения» -->
+<section class="rounded-xl border border-primary-container/40 bg-gradient-to-b from-surface-container via-surface-container-low to-surface-container-lowest p-3.5 glow-primary-card space-y-3 relative">
+<!-- Бейдж статуса и протокол -->
+<div class="flex items-center justify-between gap-1 border-b border-outline-variant/30 pb-2">
+<div class="flex items-center space-x-1.5 bg-primary-container/10 border border-primary-container/40 px-2 py-0.5 rounded">
+<span class="material-symbols-outlined text-primary-container text-[16px]" data-icon="verified" data-weight="fill">verified</span>
+<span class="font-telemetry-sm text-telemetry-sm text-primary-container font-semibold truncate">
+            ● VPN РАБОТАЕТ (ЧЕРЕЗ РЕЗЕРВ #2) • ТУННЕЛЬ ПРОВЕРЕН
+          </span>
+</div>
+<span class="font-badge-code text-badge-code text-secondary-container bg-surface-container-high px-1.5 py-0.5 rounded border border-secondary-container/30 uppercase shrink-0">
+          VLESS-XTLS Reality
+        </span>
+</div>
+<!-- Активный защищённый узел -->
+<div>
+<span class="font-telemetry-sm text-telemetry-sm text-on-surface-variant block uppercase mb-1">
+          Активный защищённый узел:
+        </span>
+<div class="flex items-center justify-between">
+<div class="flex items-center space-x-2.5">
+<span aria-label="Флаг Германии" class="text-2xl" role="img">🇩🇪</span>
+<div>
+<h2 class="font-headline-md text-headline-md text-on-surface leading-tight font-bold">
+                Германия #2
+              </h2>
+<span class="font-telemetry-sm text-telemetry-sm text-primary-fixed">VLESS Reality • Standby Tier-1</span>
+</div>
+</div>
+<div class="w-7 h-7 rounded border border-primary-container/40 bg-primary-container/10 flex items-center justify-center text-primary-container">
+<span class="material-symbols-outlined text-[18px]" data-icon="lock" data-weight="fill">lock</span>
+</div>
+</div>
+</div>
+<!-- Сетка телеметрии из 3 метрик -->
+<div class="grid grid-cols-1 gap-1.5 pt-1">
+<!-- Метрика 1 -->
+<div class="flex items-center justify-between px-2.5 py-1.5 rounded bg-surface-container-lowest border border-outline-variant/20">
+<div class="flex items-center space-x-2">
+<span class="material-symbols-outlined text-[16px] text-secondary" data-icon="public">public</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Внешний IP:</span>
+</div>
+<div class="flex items-center space-x-1.5">
+<span class="font-telemetry-sm text-telemetry-sm text-on-surface font-semibold">185.220.xx.xx [DE]</span>
+<span class="font-badge-code text-badge-code text-primary-container bg-primary-container/10 px-1 py-0.2 rounded border border-primary-container/30">Защищён</span>
+</div>
+</div>
+<!-- Метрика 2 -->
+<div class="flex items-center justify-between px-2.5 py-1.5 rounded bg-surface-container-lowest border border-outline-variant/20">
+<div class="flex items-center space-x-2">
+<span class="material-symbols-outlined text-[16px] text-primary-container" data-icon="network_ping">network_ping</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Пинг узла:</span>
+</div>
+<div class="flex items-center space-x-1.5">
+<span class="font-telemetry-sm text-telemetry-sm text-primary-fixed font-semibold">48 мс</span>
+<span class="text-on-surface-variant text-xs">•</span>
+<span class="font-telemetry-sm text-telemetry-sm text-on-surface">Стабилен</span>
+</div>
+</div>
+<!-- Метрика 3 -->
+<div class="flex items-center justify-between px-2.5 py-1.5 rounded bg-surface-container-lowest border border-outline-variant/20">
+<div class="flex items-center space-x-2">
+<span class="material-symbols-outlined text-[16px] text-secondary" data-icon="speed">speed</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Скорость:</span>
+</div>
+<div class="flex items-center space-x-1">
+<span class="font-telemetry-sm text-telemetry-sm text-on-surface font-medium">↓ 38.2 • ↑ 14.1 Мбит/с</span>
+</div>
+</div>
+</div>
+<!-- Нижняя строка карточки: Таймер и Отключение -->
+<div class="pt-2 border-t border-outline-variant/30 flex items-center justify-between">
+<div class="flex items-center space-x-1.5 bg-surface-container-lowest px-2.5 py-1.5 rounded border border-outline-variant/30">
+<span class="font-telemetry-md text-telemetry-md text-on-surface-variant">⏱ 00:41:10</span>
+</div>
+<button class="flex items-center space-x-1.5 px-3 py-1.5 rounded bg-error-container text-tertiary border border-on-tertiary-container hover:bg-on-tertiary-container/40 transition-colors active:scale-95 duration-100 ease-out font-telemetry-sm text-telemetry-sm font-semibold tracking-wider">
+<span class="material-symbols-outlined text-[16px]" data-icon="power_settings_new">power_settings_new</span>
+<span>ОТКЛЮЧИТЬ VPN</span>
+</button>
+</div>
+</section>
+<!-- 4. Информационная плашка статуса каскада -->
+<section class="rounded border border-outline-variant/30 bg-surface-container-low px-3 py-2 flex items-center justify-between">
+<div class="flex items-center space-x-2">
+<span class="material-symbols-outlined text-primary-container text-[16px]" data-icon="hub">hub</span>
+<span class="font-telemetry-sm text-telemetry-sm text-on-surface">
+          Подписка активна • Автозамена (Auto-Failover) <span class="text-primary-container font-semibold">[ON]</span> • 4 резервных узла
+        </span>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant text-[16px]" data-icon="sync">sync</span>
+</section>
+<!-- 5. Список серверов и очередь автозамены -->
+<section class="space-y-2 pt-1">
+<div class="flex items-center justify-between px-0.5">
+<h3 class="font-telemetry-sm text-telemetry-sm uppercase font-semibold text-on-surface-variant tracking-wider">
+          ПОДКЛЮЧЁННЫЙ VPN И ОЧЕРЕДЬ АВТОЗАМЕНЫ
+        </h3>
+<span class="font-badge-code text-badge-code text-on-surface-variant">3 ПОЗИЦИИ</span>
+</div>
+<!-- Строка 1: Поднята на 1-е место, активная -->
+<div class="rounded-lg border-2 border-primary-container bg-surface-container p-2.5 flex items-center justify-between relative shadow-sm">
+<div class="flex items-center space-x-2.5">
+<span aria-label="Германия" class="text-xl" role="img">🇩🇪</span>
+<div>
+<div class="flex items-center space-x-1.5">
+<span class="font-body-md text-body-md font-semibold text-on-surface">Германия #2</span>
+<span class="font-badge-code text-badge-code text-primary-container bg-primary-container/10 px-1 py-0.2 rounded border border-primary-container/30 uppercase">
+                СЕЙЧАС ПОДКЛЮЧЕН (АВТОЗАМЕНА)
+              </span>
+</div>
+<div class="flex items-center space-x-2 pt-0.5">
+<span class="font-telemetry-sm text-telemetry-sm text-on-surface-variant">VLESS Reality</span>
+<span class="text-on-surface-variant text-xs">•</span>
+<span class="font-telemetry-sm text-telemetry-sm text-primary-container flex items-center gap-1">
+                ● 48 мс
+              </span>
+</div>
+</div>
+</div>
+<div class="w-6 h-6 rounded-full bg-primary-container/20 text-primary-container flex items-center justify-center">
+<span class="material-symbols-outlined text-[16px]" data-icon="check_circle" data-weight="fill">check_circle</span>
+</div>
+</div>
+<!-- Строка 2: Резерв наготове -->
+<div class="rounded-lg border border-outline-variant/30 bg-surface-container-low p-2.5 flex items-center justify-between hover:border-secondary-container/40 transition-colors">
+<div class="flex items-center space-x-2.5">
+<span aria-label="Финляндия" class="text-xl" role="img">🇫🇮</span>
+<div>
+<div class="flex items-center space-x-1.5">
+<span class="font-body-md text-body-md font-semibold text-on-surface">Финляндия #3</span>
+<span class="font-badge-code text-badge-code text-secondary bg-secondary/10 px-1 py-0.2 rounded border border-secondary/30 uppercase">
+                СЛЕДУЮЩИЙ РЕЗЕРВ
+              </span>
+</div>
+<div class="flex items-center space-x-2 pt-0.5">
+<span class="font-telemetry-sm text-telemetry-sm text-on-surface-variant">HY2</span>
+<span class="text-on-surface-variant text-xs">•</span>
+<span class="font-telemetry-sm text-telemetry-sm text-secondary">62 мс</span>
+</div>
+</div>
+</div>
+<button class="px-2.5 py-1 rounded bg-surface-container border border-outline-variant/40 hover:border-secondary-container hover:text-secondary text-on-surface font-telemetry-sm text-telemetry-sm transition-all active:scale-95 duration-75">
+          Подключить
+        </button>
+</div>
+<!-- Строка 3: Упавший сервер -->
+<div class="rounded-lg border border-error-container/40 bg-surface-container-lowest/80 p-2.5 flex items-center justify-between opacity-80 hover:opacity-100 transition-opacity">
+<div class="flex items-center space-x-2.5">
+<span aria-label="Нидерланды" class="text-xl filter grayscale contrast-75" role="img">🇳🇱</span>
+<div>
+<div class="flex items-center space-x-1.5 flex-wrap gap-y-0.5">
+<span class="font-body-md text-body-md font-medium text-on-surface-variant">Нидерланды #1</span>
+<span class="font-badge-code text-badge-code text-error bg-error-container/20 px-1 py-0.2 rounded border border-error/30 uppercase">
+                НЕ ОТВЕЧАЕТ • ПРОВЕРКА ЧЕРЕЗ 30 СЕК
+              </span>
+</div>
+<div class="flex items-center space-x-2 pt-0.5">
+<span class="font-telemetry-sm text-telemetry-sm text-on-surface-variant">VLESS</span>
+<span class="text-on-surface-variant text-xs">•</span>
+<span class="font-telemetry-sm text-telemetry-sm text-error">Таймаут пакетов</span>
+</div>
+</div>
+</div>
+<button aria-label="Повторить проверку" class="p-1.5 rounded bg-surface-container-high border border-outline-variant/30 text-on-surface-variant hover:text-on-surface active:scale-95 transition-transform">
+<span class="material-symbols-outlined text-[18px]" data-icon="refresh">refresh</span>
+</button>
+</div>
+</section>
+<!-- 6. Скрытые серверы -->
+<div class="pt-1 pb-2">
+<button class="w-full py-1.5 px-3 rounded border border-outline-variant/20 bg-surface-container-lowest flex items-center justify-center space-x-1.5 text-on-surface-variant hover:text-on-surface hover:bg-surface-container-low transition-colors">
+<span class="font-telemetry-sm text-telemetry-sm">Скрыто недоступных серверов: 1</span>
+<span class="material-symbols-outlined text-[16px]" data-icon="arrow_drop_down">arrow_drop_down</span>
+</button>
+</div>
+</div>
+<!-- 7. Нижняя навигация BottomNavBar -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-space-xs h-16 bg-surface-container-lowest/95 backdrop-blur-md">
+<!-- Таб 1: VPN (АКТИВНЫЙ) -->
+<button class="flex flex-col items-center justify-center text-primary-container dark:text-primary-container border-t-2 border-primary-container py-1 flex-1 h-full hover:text-primary-fixed hover:opacity-100 transition-opacity duration-150 active:scale-95">
+<span class="material-symbols-outlined text-[22px]" data-icon="vpn_lock" data-weight="fill">vpn_lock</span>
+<span class="font-telemetry-sm text-telemetry-sm font-medium tracking-tight mt-0.5">VPN</span>
+</button>
+<!-- Таб 2: Мои ключи -->
+<button class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-surface-variant opacity-60 py-1 flex-1 h-full hover:text-primary-fixed hover:opacity-100 transition-opacity duration-150 active:scale-95">
+<span class="material-symbols-outlined text-[22px]" data-icon="key">key</span>
+<span class="font-telemetry-sm text-telemetry-sm font-medium tracking-tight mt-0.5">Мои ключи</span>
+</button>
+<!-- Таб 3: Проверка IP -->
+<button class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-surface-variant opacity-60 py-1 flex-1 h-full hover:text-primary-fixed hover:opacity-100 transition-opacity duration-150 active:scale-95">
+<span class="material-symbols-outlined text-[22px]" data-icon="network_check">network_check</span>
+<span class="font-telemetry-sm text-telemetry-sm font-medium tracking-tight mt-0.5">Проверка IP</span>
+</button>
+<!-- Таб 4: Настройки -->
+<button class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-surface-variant opacity-60 py-1 flex-1 h-full hover:text-primary-fixed hover:opacity-100 transition-opacity duration-150 active:scale-95">
+<span class="material-symbols-outlined text-[22px]" data-icon="tune">tune</span>
+<span class="font-telemetry-sm text-telemetry-sm font-medium tracking-tight mt-0.5">Настройки</span>
+</button>
+</nav>
+</body></html>

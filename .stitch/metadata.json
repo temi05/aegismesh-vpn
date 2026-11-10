@@ -1,0 +1,27 @@
+{
+  "name": "projects/16481386692824705431",
+  "projectId": "16481386692824705431",
+  "title": "AegisMesh VPN — Tactical Auto-Failover & Cyber Shield",
+  "visibility": "PRIVATE",
+  "projectType": "PROJECT_DESIGN",
+  "origin": "STITCH",
+  "deviceType": "DESKTOP",
+  "designSystem": "assets/9dfefff40f19401693137a7ba8c672f3",
+  "designTheme": {
+    "colorMode": "DARK",
+    "font": "SPACE_GROTESK",
+    "roundness": "ROUND_FOUR",
+    "customColor": "#00f59b",
+    "headlineFont": "SPACE_GROTESK",
+    "bodyFont": "MANROPE",
+    "labelFont": "JETBRAINS_MONO"
+  },
+  "screens": {
+    "desktop-command-center": {
+      "id": "20a19dd22930443fb59920255ab7b8e5",
+      "sourceScreen": "projects/16481386692824705431/screens/20a19dd22930443fb59920255ab7b8e5",
+      "width": 2706,
+      "height": 2904
+    }
+  }
+}

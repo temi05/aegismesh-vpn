@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="ru"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>AegisMesh VPN v2 — Мои ключи</title>
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&amp;family=Manrope:wght@400;500;600;700&amp;family=Space+Grotesk:wght@600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "primary-fixed": "#53ffab",
+            "on-secondary-fixed-variant": "#004e60",
+            "surface-container-low": "#161c27",
+            "outline-variant": "#3b4a3f",
+            "on-tertiary-fixed-variant": "#920028",
+            "on-tertiary": "#68001a",
+            "error": "#ffb4ab",
+            "surface-bright": "#333946",
+            "surface-container-lowest": "#080e19",
+            "on-error-container": "#ffdad6",
+            "primary": "#cdffdc",
+            "outline": "#849588",
+            "surface-container": "#1a202b",
+            "secondary-fixed-dim": "#47d6ff",
+            "on-secondary-container": "#00566a",
+            "surface-container-high": "#242a36",
+            "primary-fixed-dim": "#00e38f",
+            "surface": "#0d131e",
+            "primary-container": "#00f59b",
+            "surface-container-highest": "#2f3541",
+            "on-error": "#690005",
+            "inverse-on-surface": "#2b303d",
+            "background": "#0d131e",
+            "tertiary-container": "#ffcacb",
+            "surface-variant": "#2f3541",
+            "on-primary": "#003920",
+            "error-container": "#93000a",
+            "on-surface": "#dde2f2",
+            "on-background": "#dde2f2",
+            "inverse-primary": "#006d42",
+            "on-secondary-fixed": "#001f28",
+            "secondary-fixed": "#b6ebff",
+            "tertiary": "#fff0f0",
+            "on-primary-container": "#006b41",
+            "secondary": "#a5e7ff",
+            "on-secondary": "#003543",
+            "on-primary-fixed": "#002111",
+            "secondary-container": "#00d2ff",
+            "surface-dim": "#0d131e",
+            "on-tertiary-container": "#bc0036",
+            "on-surface-variant": "#b9cbbd",
+            "inverse-surface": "#dde2f2",
+            "surface-tint": "#00e38f",
+            "tertiary-fixed": "#ffdada",
+            "tertiary-fixed-dim": "#ffb3b6",
+            "on-tertiary-fixed": "#40000c",
+            "on-primary-fixed-variant": "#005231"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.125rem",
+            "lg": "0.25rem",
+            "xl": "0.5rem",
+            "full": "0.75rem"
+          },
+          "spacing": {
+            "space-md": "0.75rem",
+            "space-lg": "1.25rem",
+            "margin": "1rem",
+            "gutter-desktop": "1.5rem",
+            "space-xs": "0.25rem",
+            "margin-desktop": "2rem",
+            "gutter": "1rem",
+            "space-xl": "2rem",
+            "space-sm": "0.5rem"
+          },
+          "fontFamily": {
+            "headline-md": ["Space Grotesk"],
+            "display-xl-mobile": ["Space Grotesk"],
+            "body-md": ["Manrope"],
+            "headline-lg-mobile": ["Space Grotesk"],
+            "body-sm": ["Manrope"],
+            "telemetry-sm": ["JetBrains Mono"],
+            "badge-code": ["JetBrains Mono"],
+            "headline-lg": ["Space Grotesk"],
+            "display-xl": ["Space Grotesk"],
+            "telemetry-md": ["JetBrains Mono"],
+            "telemetry-lg": ["JetBrains Mono"],
+            "body-lg": ["Manrope"]
+          },
+          "fontSize": {
+            "headline-md": ["1.25rem", {"lineHeight": "1.75rem", "letterSpacing": "0.01em", "fontWeight": "600"}],
+            "display-xl-mobile": ["2rem", {"lineHeight": "2.5rem", "letterSpacing": "-0.01em", "fontWeight": "700"}],
+            "body-md": ["0.875rem", {"lineHeight": "1.25rem", "fontWeight": "400"}],
+            "headline-lg-mobile": ["1.5rem", {"lineHeight": "2rem", "letterSpacing": "0", "fontWeight": "600"}],
+            "body-sm": ["0.75rem", {"lineHeight": "1rem", "fontWeight": "400"}],
+            "telemetry-sm": ["0.75rem", {"lineHeight": "1rem", "letterSpacing": "0.04em", "fontWeight": "400"}],
+            "badge-code": ["0.6875rem", {"lineHeight": "0.875rem", "letterSpacing": "0.06em", "fontWeight": "700"}],
+            "headline-lg": ["2rem", {"lineHeight": "2.5rem", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+            "display-xl": ["3rem", {"lineHeight": "3.5rem", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+            "telemetry-md": ["0.875rem", {"lineHeight": "1.25rem", "letterSpacing": "0", "fontWeight": "500"}],
+            "telemetry-lg": ["1.125rem", {"lineHeight": "1.5rem", "letterSpacing": "-0.02em", "fontWeight": "600"}],
+            "body-lg": ["1rem", {"lineHeight": "1.5rem", "fontWeight": "500"}]
+          }
+        }
+      }
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-family: 'Material Symbols Outlined';
+      font-weight: normal;
+      font-style: normal;
+      font-size: 20px;
+      line-height: 1;
+      letter-spacing: normal;
+      text-transform: none;
+      display: inline-block;
+      white-space: nowrap;
+      word-wrap: normal;
+      direction: ltr;
+      -webkit-font-feature-settings: 'liga';
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Pulse tactical dot */
+    @keyframes tacticalPulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.85); }
+    }
+    .pulse-indicator {
+      animation: tacticalPulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+
+    /* Ambient cyber-grid */
+    .tactical-grid-bg {
+      background-image: linear-gradient(rgba(142, 158, 181, 0.03) 1px, transparent 1px),
+                        linear-gradient(90deg, rgba(142, 158, 181, 0.03) 1px, transparent 1px);
+      background-size: 24px 24px;
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-[#070A0F] text-on-surface font-body-md antialiased min-h-screen tactical-grid-bg selection:bg-primary-container selection:text-surface">
+<!-- Mobile App Frame Container -->
+<div class="max-w-md mx-auto min-h-screen flex flex-col relative pb-28">
+<!-- 1. TopAppBar (Shared Component Implementation) -->
+<header class="sticky top-0 z-40 flex justify-between items-center w-full px-margin h-14 bg-surface dark:bg-surface border-b border-outline-variant/30">
+<div class="flex items-center gap-space-sm">
+<span class="material-symbols-outlined text-primary-container" data-icon="shield">shield</span>
+<h1 class="text-headline-md font-headline-md font-bold text-on-surface dark:text-on-surface uppercase tracking-wider text-sm sm:text-base">
+          МОИ КЛЮЧИ И ПОДПИСКИ
+        </h1>
+</div>
+<!-- Tactical Action Trigger: Ping All -->
+<button class="flex items-center gap-1.5 px-space-sm py-1 bg-surface-container-high border border-secondary-container/40 rounded hover:border-secondary-container active:scale-95 transition-all text-secondary-container" id="pingAllBtn">
+<span class="material-symbols-outlined text-base" data-icon="network_ping">network_ping</span>
+<span class="font-badge-code text-badge-code tracking-wider uppercase text-secondary">Пинг всех</span>
+<span class="w-1.5 h-1.5 rounded-full bg-primary-container pulse-indicator"></span>
+</button>
+</header>
+<!-- Operational Canvas Content -->
+<main class="flex-1 px-margin pt-space-md space-y-space-md">
+<!-- 2. Fast Import & QR Bar -->
+<section class="space-y-space-xs">
+<div class="flex items-center gap-space-xs">
+<!-- Primary Neon Button -->
+<button class="flex-1 flex items-center justify-center gap-space-xs py-2.5 px-space-md bg-primary-container text-[#070A0F] font-headline-md text-body-md font-bold rounded shadow-[0_0_16px_-3px_rgba(0,245,155,0.4)] active:scale-95 hover:bg-primary transition-transform duration-150">
+<span class="material-symbols-outlined font-bold" data-icon="content_paste">content_paste</span>
+<span>+ Вставить ключ из буфера</span>
+</button>
+<!-- Tactical QR Scanner Button -->
+<button class="h-10 w-10 flex items-center justify-center bg-surface-container border border-outline-variant/50 rounded text-secondary-container hover:border-secondary-container active:scale-95 transition-all" title="Сканировать QR-код">
+<span class="material-symbols-outlined" data-icon="qr_code_scanner">qr_code_scanner</span>
+</button>
+</div>
+<!-- Protocol Specification Chip -->
+<div class="px-space-sm py-1 bg-surface-container-lowest border border-outline-variant/30 rounded flex items-center justify-between">
+<span class="font-telemetry-sm text-telemetry-sm text-on-surface-variant truncate">
+            vless://, hy2://, trojan://, ss://, wg:// или https:// ссылка
+          </span>
+<span class="font-badge-code text-badge-code text-primary-container shrink-0 ml-1.5">v2.4 READY</span>
+</div>
+</section>
+<!-- 3. Active Provider Subscription Card -->
+<section class="bg-surface-container-low border border-outline-variant/40 rounded-lg p-space-md relative overflow-hidden shadow-[0_0_14px_-4px_rgba(0,210,255,0.12)]">
+<!-- Accent top micro-border -->
+<div class="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-secondary-container via-primary-container to-secondary-container"></div>
+<div class="flex items-start justify-between mb-2">
+<div>
+<div class="flex items-center gap-1.5 mb-1">
+<span class="font-badge-code text-badge-code text-secondary uppercase px-1.5 py-0.5 bg-secondary-container/10 border border-secondary-container/30 rounded">
+                PROVIDER ROUTE
+              </span>
+<span class="inline-flex items-center gap-1 font-telemetry-sm text-telemetry-sm text-primary-container">
+<span class="material-symbols-outlined text-sm" data-icon="verified_user">verified_user</span>
+                Активна
+              </span>
+</div>
+<h2 class="font-headline-md text-body-lg font-bold text-on-surface">
+              Премиум Подписка #1 (Европа FastRoute)
+            </h2>
+</div>
+<!-- Subscription Controls -->
+<div class="flex items-center gap-1">
+<button class="p-1.5 rounded bg-surface-container-high border border-outline-variant/40 text-on-surface hover:text-primary-container active:scale-95 transition-transform" title="Обновить подписку">
+<span class="material-symbols-outlined text-base" data-icon="sync">sync</span>
+</button>
+<button class="p-1.5 rounded bg-surface-container-high border border-error-container/40 text-error hover:bg-error-container/20 active:scale-95 transition-transform" title="Удалить подписку">
+<span class="material-symbols-outlined text-base" data-icon="delete_outline">delete_outline</span>
+</button>
+</div>
+</div>
+<!-- Compatibility Spec Badge -->
+<div class="flex items-center gap-1 text-on-surface-variant font-telemetry-sm text-telemetry-sm mb-3">
+<span class="text-secondary-container">•</span>
+<span>Совместимость: <span class="text-on-surface">Happ / Shadowrocket / sing-box</span></span>
+</div>
+<!-- Traffic Telemetry & Progress Bar -->
+<div class="space-y-1.5 pt-1 border-t border-outline-variant/20">
+<div class="flex justify-between items-center font-telemetry-sm text-telemetry-sm">
+<span class="text-on-surface">
+              Использовано <strong class="text-primary-container font-semibold">18.4 ГБ</strong> из 100 ГБ
+            </span>
+<span class="text-on-surface-variant font-badge-code text-badge-code">
+              До 25.12.2026
+            </span>
+</div>
+<!-- Progress track -->
+<div class="w-full h-1.5 bg-surface-container-lowest rounded-full overflow-hidden border border-outline-variant/30 flex">
+<div class="h-full bg-gradient-to-r from-secondary-container to-primary-container rounded-full" style="width: 18.4%;"></div>
+</div>
+</div>
+</section>
+<!-- 4. Real Working VPN Nodes List (Cascade Failover Queue) -->
+<section class="space-y-space-sm">
+<!-- Queue Header with Failover Mode Tag -->
+<div class="flex items-center justify-between px-0.5">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-secondary-container text-base" data-icon="swap_vert">swap_vert</span>
+<h3 class="font-headline-md text-body-md font-semibold text-on-surface">
+              Порядок автозамены (сверху вниз):
+            </h3>
+</div>
+<span class="font-badge-code text-badge-code px-1.5 py-0.5 bg-primary-container/10 border border-primary-container/40 text-primary-container rounded flex items-center gap-1">
+<span class="w-1.5 h-1.5 rounded-full bg-primary-container pulse-indicator"></span>
+            AUTO-FAILOVER ON
+          </span>
+</div>
+<!-- Node 1: Active Connected -->
+<div class="bg-surface-container border border-primary-container/50 rounded-lg p-space-sm relative shadow-[0_0_16px_-2px_rgba(0,245,155,0.2),inset_0_0_12px_rgba(0,245,155,0.03)]">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2.5">
+<span class="text-lg leading-none shrink-0" title="Нидерланды">🇳🇱</span>
+<div>
+<div class="flex items-center gap-1.5">
+<span class="font-headline-md text-body-md font-bold text-on-surface">
+                    #1 • Сервер Амстердам (Основной)
+                  </span>
+</div>
+<div class="flex items-center gap-2 mt-0.5">
+<span class="font-badge-code text-badge-code text-secondary px-1 py-0.5 bg-secondary-container/10 rounded">
+                    VLESS Reality
+                  </span>
+<span class="font-telemetry-sm text-telemetry-sm text-primary-container font-semibold flex items-center gap-1">
+<span class="w-1.5 h-1.5 rounded-full bg-primary-container pulse-indicator"></span>
+                    СЕЙЧАС ПОДКЛЮЧЕН • 34 мс
+                  </span>
+</div>
+</div>
+</div>
+<!-- Priority & Manage Controls -->
+<div class="flex items-center gap-1 shrink-0 ml-2">
+<div class="flex flex-col gap-0.5">
+<button class="w-6 h-5 flex items-center justify-center bg-surface-container-high border border-outline-variant/30 rounded text-on-surface-variant hover:text-primary-container hover:border-primary-container active:scale-95 transition-transform" title="Повысить приоритет">
+<span class="material-symbols-outlined text-sm" data-icon="arrow_upward">arrow_upward</span>
+</button>
+<button class="w-6 h-5 flex items-center justify-center bg-surface-container-high border border-outline-variant/30 rounded text-on-surface-variant hover:text-primary-container hover:border-primary-container active:scale-95 transition-transform" title="Понизить приоритет">
+<span class="material-symbols-outlined text-sm" data-icon="arrow_downward">arrow_downward</span>
+</button>
+</div>
+<button class="w-7 h-10 flex items-center justify-center bg-surface-container-high border border-outline-variant/30 rounded text-on-surface-variant hover:text-error hover:border-error active:scale-95 transition-transform ml-0.5" title="Удалить сервер">
+<span class="material-symbols-outlined text-base" data-icon="delete">delete</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Node 2: Standby 1 -->
+<div class="bg-surface-container-low border border-outline-variant/30 rounded-lg p-space-sm hover:border-outline-variant transition-colors">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2.5">
+<span class="text-lg leading-none shrink-0" title="Германия">🇩🇪</span>
+<div>
+<div class="flex items-center gap-1.5">
+<span class="font-headline-md text-body-md font-semibold text-on-surface">
+                    #2 • Сервер Франкфурт (Резерв 1)
+                  </span>
+</div>
+<div class="flex items-center gap-2 mt-0.5">
+<span class="font-badge-code text-badge-code text-secondary px-1 py-0.5 bg-secondary-container/10 rounded">
+                    Hysteria 2
+                  </span>
+<span class="font-telemetry-sm text-telemetry-sm text-on-surface-variant flex items-center gap-1">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary-container"></span>
+                    Готов • 48 мс
+                  </span>
+</div>
+</div>
+</div>
+<!-- Priority & Manage Controls -->
+<div class="flex items-center gap-1 shrink-0 ml-2">
+<div class="flex flex-col gap-0.5">
+<button class="w-6 h-5 flex items-center justify-center bg-surface-container-high border border-outline-variant/30 rounded text-on-surface-variant hover:text-primary-container active:scale-95 transition-transform">
+<span class="material-symbols-outlined text-sm" data-icon="arrow_upward">arrow_upward</span>
+</button>
+<button class="w-6 h-5 flex items-center justify-center bg-surface-container-high border border-outline-variant/30 rounded text-on-surface-variant hover:text-primary-container active:scale-95 transition-transform">
+<span class="material-symbols-outlined text-sm" data-icon="arrow_downward">arrow_downward</span>
+</button>
+</div>
+<button class="w-7 h-10 flex items-center justify-center bg-surface-container-high border border-outline-variant/30 rounded text-on-surface-variant hover:text-error active:scale-95 transition-transform ml-0.5">
+<span class="material-symbols-outlined text-base" data-icon="delete">delete</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Node 3: Standby 2 -->
+<div class="bg-surface-container-low border border-outline-variant/30 rounded-lg p-space-sm hover:border-outline-variant transition-colors">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2.5">
+<span class="text-lg leading-none shrink-0" title="Финляндия">🇫🇮</span>
+<div>
+<div class="flex items-center gap-1.5">
+<span class="font-headline-md text-body-md font-semibold text-on-surface">
+                    #3 • Сервер Хельсинки (Резерв 2)
+                  </span>
+</div>
+<div class="flex items-center gap-2 mt-0.5">
+<span class="font-badge-code text-badge-code text-secondary px-1 py-0.5 bg-secondary-container/10 rounded">
+                    WireGuard
+                  </span>
+<span class="font-telemetry-sm text-telemetry-sm text-on-surface-variant flex items-center gap-1">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary-container"></span>
+                    Готов • 62 мс
+                  </span>
+</div>
+</div>
+</div>
+<!-- Priority & Manage Controls -->
+<div class="flex items-center gap-1 shrink-0 ml-2">
+<div class="flex flex-col gap-0.5">
+<button class="w-6 h-5 flex items-center justify-center bg-surface-container-high border border-outline-variant/30 rounded text-on-surface-variant hover:text-primary-container active:scale-95 transition-transform">
+<span class="material-symbols-outlined text-sm" data-icon="arrow_upward">arrow_upward</span>
+</button>
+<button class="w-6 h-5 flex items-center justify-center bg-surface-container-high border border-outline-variant/30 rounded text-on-surface-variant hover:text-primary-container active:scale-95 transition-transform">
+<span class="material-symbols-outlined text-sm" data-icon="arrow_downward">arrow_downward</span>
+</button>
+</div>
+<button class="w-7 h-10 flex items-center justify-center bg-surface-container-high border border-outline-variant/30 rounded text-on-surface-variant hover:text-error active:scale-95 transition-transform ml-0.5">
+<span class="material-symbols-outlined text-base" data-icon="delete">delete</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Filter Hygiene Tactical Badge -->
+<div class="flex items-center gap-2 p-2 bg-[#080E19] border border-outline-variant/20 rounded font-telemetry-sm text-telemetry-sm text-on-surface-variant">
+<span class="material-symbols-outlined text-primary-container text-base" data-icon="filter_alt">filter_alt</span>
+<span class="text-xs">
+            Отфильтровано служебных инфо-строк (0.0.0.0:1): <strong class="text-primary-container">2</strong>
+</span>
+<span class="ml-auto material-symbols-outlined text-primary-container text-sm" data-icon="check_circle">check_circle</span>
+</div>
+</section>
+</main>
+<!-- 5. BottomNavBar (Shared Component Implementation) -->
+<!-- Screen represents "Мои ключи", so index 1 is active with style_active_navigation -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-margin py-space-xs bg-surface-container-lowest dark:bg-surface-container-lowest border-t border-outline-variant/30 pb-safe shadow-[0_-4px_16px_rgba(0,0,0,0.6)]">
+<!-- Tab 1: VPN -->
+<button class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-surface-variant py-1 opacity-70 hover:text-primary dark:hover:text-primary hover:bg-surface-container-low transition-colors active:scale-95">
+<span class="material-symbols-outlined" data-icon="vpn_lock">vpn_lock</span>
+<span class="font-badge-code text-badge-code mt-0.5">VPN</span>
+</button>
+<!-- Tab 2: Мои ключи (ACTIVE) -->
+<button class="flex flex-col items-center justify-center text-primary-container dark:text-primary-container bg-surface-container-high dark:bg-surface-container-high rounded px-space-md py-1 border border-primary-container/30 shadow-[0_0_12px_rgba(0,245,155,0.15)] active:scale-95">
+<span class="material-symbols-outlined text-primary-container font-semibold" data-icon="key">key</span>
+<span class="font-badge-code text-badge-code mt-0.5 text-primary-container">Мои ключи</span>
+</button>
+<!-- Tab 3: Проверка IP -->
+<button class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-surface-variant py-1 opacity-70 hover:text-primary dark:hover:text-primary hover:bg-surface-container-low transition-colors active:scale-95">
+<span class="material-symbols-outlined" data-icon="travel_explore">travel_explore</span>
+<span class="font-badge-code text-badge-code mt-0.5">Проверка IP</span>
+</button>
+<!-- Tab 4: Настройки -->
+<button class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-surface-variant py-1 opacity-70 hover:text-primary dark:hover:text-primary hover:bg-surface-container-low transition-colors active:scale-95">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span class="font-badge-code text-badge-code mt-0.5">Настройки</span>
+</button>
+</nav>
+</div>
+<!-- Interactive Telemetry Script -->
+<script>
+    document.getElementById('pingAllBtn')?.addEventListener('click', function() {
+      const btn = this;
+      const originalText = btn.innerHTML;
+      btn.innerHTML = `
+        <span class="material-symbols-outlined text-base animate-spin" data-icon="autorenew">autorenew</span>
+        <span class="font-badge-code text-badge-code tracking-wider uppercase text-secondary">Тест...</span>
+      `;
+      setTimeout(() => {
+        btn.innerHTML = originalText;
+      }, 1200);
+    });
+  </script>
+</body></html>

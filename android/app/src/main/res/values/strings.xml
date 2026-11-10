@@ -1,0 +1,9 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">AegisMesh VPN</string>
+    <string name="title_activity_main">AegisMesh VPN</string>
+    <string name="package_name">com.aegismesh.vpn</string>
+    <string name="custom_url_scheme">com.aegismesh.vpn</string>
+    <string name="tile_label">AegisMesh VPN</string>
+    <string name="widget_description">Тактический виджет AegisMesh VPN: статус туннеля, вкл/выкл и мгновенная смена сервера в 1 нажатие</string>
+</resources>
